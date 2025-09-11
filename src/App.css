@@ -1,0 +1,8 @@
+.imageSize{
+    @apply w-[50%] h-[100vh]
+}
+
+.backgroundimage{
+    @apply w-[50%] h-[100%]
+
+}
