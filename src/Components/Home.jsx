@@ -1,104 +1,62 @@
+// Home.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   IoLogoFacebook, IoLogoInstagram, IoLogoTwitter, IoLogoWhatsapp,
-  IoCart, IoSearch, IoMenu, IoClose, IoStar, IoHeart, IoHeartOutline
+  IoCart, IoSearch, IoMenu, IoClose, IoStar, IoHeart, IoHeartOutline,
+  IoFilter, IoCloseCircle
 } from 'react-icons/io5';
 import { useParams } from 'react-router-dom';
 import { CartContext } from './Cartcontext';
-import { fetchProducts, setSelectedSeller } from '../Components/HomeApi'
+import { fetchProducts, setSelectedSeller, filterProducts, setSearchTerm } from '../Components/HomeApi';
 import { useDispatch } from 'react-redux';
-import {useSelector} from "react-redux"
-
+import { useSelector } from "react-redux"
 
 const Home = () => {
   const dispatch = useDispatch()
-  const{addToCart}=useContext(CartContext)
-  const [products, setProducts] = useState([]);
-  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const { addToCart } = useContext(CartContext)
   const [cartCount, setCartCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const[searchProduct,setsearchProduct]=useState("")
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { id } = useParams(); 
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate( )
-  const listitems = useSelector((state)=>state.home.data)
-  const handleProducts = () =>{
+  const navigate = useNavigate()
+  
+  const listitems = useSelector((state) => state.home.data)
+  const filteredProducts = useSelector((state) => state.home.filteredData || state.home.data)
+  const searchTerm = useSelector((state) => state.home.searchTerm || "")
+  const loading = useSelector((state) => state.home.loading)
+  
+  // Filter states
+  const [priceRange, setPriceRange] = useState([0, 100000]);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [ratingFilter, setRatingFilter] = useState(0);
+  
+  const handleProducts = () => {
     navigate("/Register")
     window.scrollBy({
-      top:-1000,
-      behavior:"smooth"
+      top: -1000,
+      behavior: "smooth"
     })
   }
-  const handleCart = async(productId) => {
-    addToCart(productId)
-    if(productId){
-      dispatch(setSelectedSeller(productId))
+  
+  const handleCart = async(productData) => {
+    addToCart(productData)
+    if(productData){
+      dispatch(setSelectedSeller(productData))
       navigate("/Seller")
-
     }
-
   }
+  
   const handleRegister = () => navigate("/Register");
   const handleLogin = () => navigate("/Login");
-  useEffect(() => {
-    const mockProducts = [
-      {
-        id: 1,
-        name: "Organic Red Palm Oil",
-        price: 18.50,
-        oldPrice: 22.99,
-        rating: 4.8,
-        image: "palm-oil-1",
-        isFavorite: false,
-        description: "Premium quality organic palm oil sourced directly from sustainable farms."
-      },
-      {
-        id: 2,
-        name: "Refined Palm Oil",
-        price: 15.99,
-        oldPrice: 19.99,
-        rating: 4.5,
-        image: "palm-oil-2",
-        isFavorite: false,
-        description: "Refined for cooking with a neutral taste and high smoke point."
-      },
-      {
-        id: 3,
-        name: "Cold-Pressed Palm Oil",
-        price: 24.99,
-        oldPrice: 29.99,
-        rating: 4.9,
-        image: "palm-oil-3",
-        isFavorite: false,
-        description: "Cold-pressed to preserve nutrients and natural flavor."
-      },
-      {
-        id: 4,
-        name: "Palm Kernel Oil",
-        price: 21.50,
-        oldPrice: 25.99,
-        rating: 4.7,
-        image: "palm-oil-4",
-        isFavorite: false,
-        description: "Rich in vitamins and antioxidants for skincare and cooking."
-      }
-    ];
-    
-    setProducts(mockProducts);
-    setFeaturedProducts(mockProducts.slice(0, 3));
-    setCartCount(3);
-  }, []);
-
+  
   const toggleFavorite = (id) => {
-    setProducts(products.map(product => 
-      product.id === id ? {...product, isFavorite: !product.isFavorite} : product
-    ));
+    // You can implement this functionality if needed
+    console.log("Toggle favorite for product:", id);
   };
 
   const renderStars = (rating) => {
@@ -107,349 +65,316 @@ const Home = () => {
     ));
   };
   
-
+  const handleSearch = (term) => {
+    dispatch(setSearchTerm(term));
+    dispatch(filterProducts({ 
+      searchTerm: term, 
+      priceRange, 
+      category: categoryFilter, 
+      minRating: ratingFilter 
+    }));
+  };
   
-    
-    const handlesearch = (e)=>{
-      setsearchProduct(e.target.value)
-    }
-    useEffect(()=>{
-      
-       const getproducts = async()=>{
-        try {
+  const applyFilters = () => {
+    dispatch(filterProducts({ 
+      searchTerm, 
+      priceRange, 
+      category: categoryFilter, 
+      minRating: ratingFilter 
+    }));
+    setIsFilterOpen(false);
+  };
+  
+  const clearFilters = () => {
+    setPriceRange([0, 100000]);
+    setCategoryFilter('all');
+    setRatingFilter(0);
+    dispatch(setSearchTerm(''));
+    dispatch(fetchProducts());
+    setIsFilterOpen(false);
+  };
+  
+  useEffect(() => {
+    const getproducts = async() => {
+      try {
         dispatch(fetchProducts())
-        
-          
-        
-        } catch (err) {
-          if(err.response){
-           console.log(err.response.data)
-           console.log(err.response.status)
-           console.log(err.response.headers)
-           }else{
-           console.log(`Error:${err.message}`)
-
-           }
-        
-         }
-
-       }
-       getproducts()
-      
-
-
-    },[])
-    const filtersomeProduct = (productid) =>{
-      const products = listitems.filter(product => product.id !== productid)
-      return (
-        products
-      )
-
+      } catch (err) {
+        if(err.response) {
+          console.log(err.response.data)
+          console.log(err.response.status)
+          console.log(err.response.headers)
+        } else {
+          console.log(`Error:${err.message}`)
+        }
+      }
     }
+    getproducts()
+  }, [dispatch])
 
-  
+  // Update cart count when cart changes
+  useEffect(() => {
+    // This would typically come from your CartContext
+    // For now, we'll set a dummy value
+    setCartCount(3); // Example count
+  }, []);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-indigo-700 font-medium">Loading amazing products...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <section className="py-16 bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-purple-100">
+      {/* Header */}
+     
+
+      {/* Search Results Header */}
+      {searchTerm && (
+        <div className="container mx-auto px-4 pt-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Search Results for: "{searchTerm}"
+                </h2>
+                <p className="text-gray-600">
+                  {filteredProducts.length} product(s) found
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  dispatch(setSearchTerm(''));
+                  dispatch(fetchProducts());
+                }}
+                className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+              >
+                <IoCloseCircle className="mr-1 text-lg" /> Clear search
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+  
+
+      {/* Products Section */}
+      <section id="products" className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-10">
+          <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Featured Products</h2>
             <button 
-              onClick={handleProducts}
-              className="text-indigo-600 font-medium hover:text-indigo-800"
+              onClick={() => setIsFilterOpen(true)}
+              className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
             >
-              List Your Products →
+              <IoFilter className="mr-1" /> Filters
             </button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {listitems.map(product => (
-              <div key={product.id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-                <div className="relative">
-                  <img src={product.imageUrl} alt={product.name} />
-                  <div className="bg-gray-200 border-2 border-dashed rounded-t-xl w-full h-48" />
-                  <button 
-                    onClick={() => handlesearch(product.id)}
-                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
-                  >
-                    {product.isFavorite ? 
-                      <IoHeart className="text-red-500 text-xl" /> : 
-                      <IoHeartOutline className="text-gray-600 text-xl" />
-                    }
-                  </button>
-                </div>
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-2 gap-2.5">
-                    <h3 className="text-lg font-bold text-gray-900 w-[50%]">{product.sellername}</h3>
-                    <h3>{product.location}</h3>
-                    <div className="flex items-center space-x-1">
-                      {renderStars(product.rating)}
-                      <span className="text-sm text-gray-500 ml-1">{product.rating}</span>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 text-sm mb-3 h-12 overflow-hidden">
-                    {product.description}
-                  </p>
-                  <div className="flex justify-between items-center ">
-                    <div>
-                      <span className="text-lg font-bold text-indigo-600">N{product.price.toFixed(2)}</span>
-                      {product.oldPrice && (
-                        <span className="text-gray-400 line-through ml-2">N{product.oldPrice.toFixed(2)}</span>
-                      )}
-                    </div>
-                    <button onClick={()=>handleCart(product)} className="bg-indigo-600 text-white px-[4px] py-1 rounded-lg text-[10px] hover:bg-indigo-700">
-                      contact seller
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <div key={product.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
+                  <div className="relative overflow-hidden">
+                    <img 
+                      src={product.image || "https://via.placeholder.com/300x300?text=Product+Image"} 
+                      alt={product.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <button 
+                      onClick={() => toggleFavorite(product.id)}
+                      className="absolute top-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                    >
+                      <IoHeartOutline className="text-xl text-gray-600 hover:text-red-500" />
                     </button>
                   </div>
+                  
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1">{product.name}</h3>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+                    
+                    <div className="flex items-center mb-3">
+                      {renderStars(product.rating || 4.5)}
+                      <span className="text-sm text-gray-500 ml-2">({product.reviews || 24})</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-2xl font-bold text-indigo-600">${product.price}</span>
+                      <button 
+                        onClick={() => handleCart(product)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+                      >
+                        <IoCart className="mr-2" /> Contact seller
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <IoSearch className="text-6xl mx-auto" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No products found</h3>
+                <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+                <button 
+                  onClick={clearFilters}
+                  className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Clear All Filters
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
-      <header className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center">
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 rounded-full hover:bg-gray-100"
-            >
-            </button>
-            
-            <div className="relative">
+
+      {/* Filter Modal */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsFilterOpen(false)}></div>
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto my-8 p-6 animate-slideUp">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Filters</h3>
               <button 
-                onClick={handleCart}
-                className="p-2 rounded-full hover:bg-gray-100 relative"
+                onClick={() => setIsFilterOpen(false)}
+                className="p-1 text-gray-400 hover:text-gray-600"
               >
+                <IoClose className="text-xl" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Price Range Filter */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Price Range</h4>
+                <div className="space-y-2">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100000" 
+                    value={priceRange[1]} 
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>${priceRange[0]}</span>
+                    <span>${priceRange[1]}</span>
+                  </div>
+                </div>
+              </div>
               
-              </button>
-            </div>
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-full hover:bg-gray-100"
-            >
-              {isMenuOpen ? <IoClose className="text-2xl" /> : <IoMenu className="text-2xl" />}
-            </button>
-          </div>
-        </div>
-        {isMenuOpen && (
-          <div className="md:hidden bg-white py-4 px-4 shadow-lg">
-            <div className="flex flex-col space-y-4">
-              <a href="#" className="font-medium text-gray-900">Home</a>
-              <a href="#" className="font-medium text-gray-600">Shop</a>
-              <a href="#" className="font-medium text-gray-600">About</a>
-              <a href="#" className="font-medium text-gray-600">Contact</a>
-              <div className="flex space-x-4 pt-4">
-                <button 
-                  onClick={handleLogin}
-                  className="flex-1 py-2 text-gray-600 font-medium border border-gray-300 rounded-lg"
+              {/* Category Filter */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Category</h4>
+                <select 
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-300"
                 >
-                  Login
-                </button>
-                <button 
-                  onClick={handleRegister}
-                  className="flex-1 py-2 bg-indigo-600 text-white font-medium rounded-lg"
-                >
-                  List Product
-                </button>
+                  <option value="all">All Categories</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="clothing">Clothing</option>
+                  <option value="home">Home & Garden</option>
+                  <option value="sports">Sports & Outdoors</option>
+                </select>
+              </div>
+              
+              {/* Rating Filter */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Minimum Rating</h4>
+                <div className="flex space-x-2">
+                  {[0, 1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      onClick={() => setRatingFilter(rating)}
+                      className={`p-2 rounded-lg border ${
+                        ratingFilter === rating 
+                          ? 'bg-indigo-600 text-white border-indigo-600' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {rating === 0 ? 'Any' : `${rating}+ Stars`}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </header>
-      <section className="relative bg-gradient-to-r from-indigo-700 to-purple-800 text-white overflow-hidden">
-        <div className="container mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center">
-          <div className="md:w-1/2 mb-10 md:mb-0">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-              Premium Quality Products
-            </h1>
-            <p className="text-xl mb-8 text-indigo-100 max-w-lg">
-              Sustainably sourced, naturally rich in nutrients, and perfect for all your cooking needs.
-            </p>
-            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            
+            <div className="flex space-x-3 mt-8 pt-6 border-t border-gray-200">
               <button 
-                onClick={handleProducts}
-                className="px-8 py-4 bg-white text-indigo-700 font-bold rounded-lg hover:bg-indigo-100 transition-colors"
+                onClick={clearFilters}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                List Your Products
+                Clear All
               </button>
-              <button className="px-8 py-4 border-2 border-white text-white font-bold rounded-lg hover:bg-white hover:text-indigo-700 transition-colors">
-                Learn More
+              <button 
+                onClick={applyFilters}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Apply Filters
               </button>
             </div>
           </div>
-          <div className="md:w-1/2 flex justify-center">
-            <div className="relative">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-64 h-64 md:w-80 md:h-80" />
-              <div className="absolute -bottom-4 -right-4 bg-indigo-500 rounded-xl w-64 h-64 md:w-80 md:h-80 -z-10">{listitems.imageUrl}</div>
-            </div>
-          </div>
         </div>
-      </section>
-      <section className="py-16 bg-white">
+      )}
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Welcome to ShopSphere</h2>
-            <p className="text-xl text-gray-600">
-              ShopSphere connects local communities with urban markets by showcasing the exceptional quality of red palm oil. 
-              Our mission is to bring you sustainably sourced products directly from the heart of the plantations.
-            </p>
-          </div> 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gray-50 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Sustainable Sourcing</h3>
-              <p className="text-gray-600">
-                We partner with local farmers who practice sustainable farming methods to protect the environment.
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Quality</h3>
-              <p className="text-gray-600">
-                Our product undergoes strict quality control to ensure you receive only the best products.
-              </p>
-            </div>
-            
-            <div className="bg-gray-50 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Community Support</h3>
-              <p className="text-gray-600">
-                Every purchase supports local farming communities and promotes fair trade practices.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">What Our Customers Say</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-indigo-50 p-6 rounded-xl">
-              <div className="flex items-center mb-4">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mr-4" />
-                <div>
-                  <h3 className="font-bold text-gray-900">Maria Gonzalez</h3>
-                  <p className="text-gray-600">Professional Chef</p>
-                </div>
-              </div>
-              <div className="flex text-yellow-400 mb-3">
-                {renderStars(4.8)}
-              </div>
-              <blockquote className="text-gray-700 italic">
-                "The quality of red palm oil from ShopSphere is exceptional. It adds a rich flavor to my dishes that my customers absolutely love. Plus, knowing it's sustainably sourced makes me feel good about using it."
-              </blockquote>
-            </div>
-            
-            <div className="bg-indigo-50 p-6 rounded-xl">
-              <div className="flex items-center mb-4">
-                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mr-4" />
-                <div>
-                  <h3 className="font-bold text-gray-900">John Doe</h3>
-                  <p className="text-gray-600">Home Cook & Food Blogger</p>
-                </div>
-              </div>
-              <div className="flex text-yellow-400 mb-3">
-                {renderStars(4.9)}
-              </div>
-              <blockquote className="text-gray-700 italic">
-                "I appreciate the sustainable sourcing and the direct support to local communities. The palm oil has a beautiful red color and authentic flavor that elevates my West African recipes. ShopSphere is my go-to for quality ingredients."
-              </blockquote>
-            </div>
-          </div>
-          
-          <div className="text-center mt-12">
-          </div>
-        </div>
-      </section>
-      <section className="py-16 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
-        <div className="container mx-auto px-4 text-center max-w-2xl">
-          <h2 className="text-3xl font-bold mb-4">Join Our Community</h2>
-          <p className="text-xl mb-8 text-indigo-100">
-            Subscribe to our newsletter for exclusive offers, recipes, and sustainability tips.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <input 
-              type="email" 
-              placeholder="Your email address" 
-              className="px-4 py-3 rounded-lg flex-1 min-w-0 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-            <button className="px-6 py-3 bg-white text-indigo-600 font-bold rounded-lg hover:bg-indigo-50 transition-colors">
-              Subscribe
-            </button>
-          </div>
-        </div>
-      </section>
-      <footer className="bg-gray-900 text-white pt-16 pb-8">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">ShopSphere</h3>
-              <p className="text-gray-400 mb-4">
-                Premium quality palm oil products sustainably sourced from local communities.
-              </p>
+              <h3 className="text-xl font-bold mb-4">ProductHub</h3>
+              <p className="text-gray-400">Connecting buyers and sellers with quality products.</p>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Categories</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Electronics</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Clothing</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Home & Garden</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Sports</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Connect With Us</h4>
               <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <IoLogoFacebook className="text-xl" />
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <IoLogoFacebook className="text-2xl" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <IoLogoTwitter className="text-xl" />
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <IoLogoInstagram className="text-2xl" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <IoLogoInstagram className="text-xl" />
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <IoLogoTwitter className="text-2xl" />
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <IoLogoWhatsapp className="text-xl" />
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <IoLogoWhatsapp className="text-2xl" />
                 </a>
               </div>
             </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white">Home</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">About</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Contact</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Sustainability</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Recipes</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Customer Service</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white">Contact Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Shipping Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Returns & Refunds</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">FAQ</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Privacy Policy</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
-              <address className="text-gray-400 not-italic">
-                <p className="mb-2">Phone: (234) 908-662-2565</p>
-                <p className="mb-2">Email: info@shopsphere.com</p>
-              </address>
-            </div>
           </div>
           
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-500">
-            <p>© {new Date().getFullYear()} ShopSphere. All rights reserved.</p>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 ProductHub. All rights reserved.</p>
           </div>
         </div>
       </footer>

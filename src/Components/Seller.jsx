@@ -8,6 +8,14 @@ import {
 } from 'react-icons/io5';
 import io from 'socket.io-client';
 
+// Helper function to get cookie value
+const getCookie = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
+
 const Seller = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -38,18 +46,23 @@ const Seller = () => {
       setIsSellerView(true);
     }
   }, [selectedSeller, currentUser, navigate]);
+  
   useEffect(() => {
     if (selectedSeller && selectedSeller._id) {
+      // Use getCookie instead of localStorage
+      const token = getCookie('token');
+      
       socketRef.current = io('http://localhost:3200', {
         auth: {
-          token: localStorage.getItem('token') 
+          token: token
         },
         query: {
           sellerId: selectedSeller._id,
           userId: currentUser?._id || 'guest',
           userType: isSellerView ? 'seller' : 'buyer',
           userName: currentUser?.name || 'Guest User'
-        }
+        },
+        withCredentials: true // Include cookies in the request
       });
 
       socketRef.current.on('connect', () => {
@@ -144,9 +157,11 @@ const Seller = () => {
       socketRef.current.on('error', (error) => {
         console.error('Socket error:', error);
       });
+      
       if (Notification.permission === 'default') {
         Notification.requestPermission();
       }
+      
       return () => {
         if (socketRef.current) {
           socketRef.current.disconnect();
@@ -157,6 +172,7 @@ const Seller = () => {
       };
     }
   }, [selectedSeller, currentUser, isSellerView, activeConversation]);
+  
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -303,7 +319,7 @@ const Seller = () => {
               Try Again
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/Home')}
               className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors"
             >
               Go Home
@@ -665,7 +681,7 @@ const Seller = () => {
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
                     ) : (
-                      <span className="text-gray-400">No Image</span>
+                    <span className="text-gray-400">No Image</span>
                     )}
                   </div>
                   <div className="p-4">

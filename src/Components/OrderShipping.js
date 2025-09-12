@@ -1,21 +1,14 @@
-
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const getaccessToken = () => {
-  return localStorage.getItem("token");
-};
 export const fetchShippingAddress = createAsyncThunk(
   "shipping/fetchShippingAddress",
   async (_, { rejectWithValue }) => {
     try {
-      const accessToken = getaccessToken();
       const response = await axios.get(
         "http://localhost:3200/api/shipping",
         {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+          withCredentials: true // Send cookies automatically
         }
       );
       return response.data;
@@ -26,18 +19,16 @@ export const fetchShippingAddress = createAsyncThunk(
     }
   }
 );
+
 export const createOrUpdateShipping = createAsyncThunk(
   "shipping/createOrUpdateShipping",
   async (shippingData, { rejectWithValue }) => {
     try {
-      const accessToken = getaccessToken();
       const response = await axios.post(
         "http://localhost:3200/api/shipping",
         shippingData,
         {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+          withCredentials: true // Send cookies automatically
         }
       );
       return response.data;
@@ -88,6 +79,8 @@ const shippingSlice = createSlice({
       .addCase(fetchShippingAddress.fulfilled, (state, action) => {
         state.loading = false;
         state.data = action.payload;
+        
+        // Handle different response structures
         if (action.payload && action.payload.shippingAddress) {
           state.selectedShipping = action.payload.shippingAddress;
         } else if (action.payload && Array.isArray(action.payload) && action.payload.length > 0) {
@@ -112,10 +105,27 @@ const shippingSlice = createSlice({
       .addCase(createOrUpdateShipping.fulfilled, (state, action) => {
         state.saveLoading = false;
         
+        // Update selected shipping address with the new data
         if (action.payload && action.payload.shippingAddress) {
           state.selectedShipping = action.payload.shippingAddress;
         } else if (action.payload) {
           state.selectedShipping = action.payload;
+        }
+        
+        // Also update the data field if it exists
+        if (state.data && Array.isArray(state.data)) {
+          // Find and update existing address or add new one
+          const existingIndex = state.data.findIndex(item => 
+            item._id === action.payload._id || item.id === action.payload.id
+          );
+          if (existingIndex !== -1) {
+            state.data[existingIndex] = action.payload;
+          } else {
+            state.data.push(action.payload);
+          }
+        } else if (state.data && typeof state.data === 'object') {
+          // If data is a single object, replace it
+          state.data = action.payload;
         }
         
         state.saveError = null;

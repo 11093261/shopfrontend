@@ -1,22 +1,28 @@
-
 import axios from 'axios';
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import useAuth from '../Components/useAuth';
+import { useSelector, useDispatch } from 'react-redux';
 import { CartContext } from './Cartcontext';
-
+import { fetchShippingAddress } from '../Components/Shipping'; // Adjust the import path
 
 const Order = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { id } = useParams();
   const location = useLocation();
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false); 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const { getAuthConfig, handleAuthError } = useAuth();
   const [orderConfirmation, setOrderConfirmation] = useState(null);
   const { cart } = useContext(CartContext);
-  const [shippingAddress, setShippingAddress] = useState(null);
+  
+  // Get shipping data from Redux store
+  const { 
+    loading: shippingLoading, 
+    data: shippingData, 
+    selectedShipping: shippingAddress,
+    error: shippingError 
+  } = useSelector((state) => state.shipping);
+
   const [breakdown, setBreakdown] = useState({
     subtotal: 0,
     shippingFee: 0,
@@ -24,48 +30,10 @@ const Order = () => {
     total: 0
   });
 
-  const getAccessToken = () => {
-    return localStorage.getItem("token");
-  };
-  
   useEffect(() => {
-    const fetchShippingAddress = async () => {
-      try {
-        setIsLoading(true);
-        const accessToken = getAccessToken();
-        const response = await axios.get("http://localhost:3200/api/user-shipping", {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`
-          }
-        });
-        console.log("API Response:", response.data);
-        if (response.data && response.data.shipping && response.data.shipping.length > 0) {
-          const shippingData = response.data.shipping[0];
-          if (shippingData.shippingAddress) {
-            setShippingAddress(shippingData.shippingAddress);
-          }
-        } else if (response.data && response.data.shippingAddress) {
-          setShippingAddress(response.data.shippingAddress);
-        }
-        
-      } catch (error) {
-        if (error.response) {
-          console.log("Error response:", error.response.data);
-          console.log("Error status:", error.response.status);
-          if (error.response.status !== 404) {
-            setError("Failed to load shipping address");
-          }
-        } else {
-          console.log(`Error:${error.message}`);
-          setError("Network error while loading shipping address");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchShippingAddress();
-  }, []);
+    dispatch(fetchShippingAddress());
+  }, [dispatch]);
+
   useEffect(() => {
     try {
       const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -85,20 +53,30 @@ const Order = () => {
     }
   }, [cart]);
 
+  // Function to handle authentication errors
+  const handleAuthError = (error) => {
+    if (error.response?.status === 401) {
+      navigate("/login");
+      return "Authentication failed. Please login again.";
+    } else if (error.response?.status === 403) {
+      return "You don't have permission to perform this action.";
+    }
+    return error.response?.data?.message || "An error occurred";
+  };
+
   const handlePlaceOrder = async () => { 
     try {
       setIsPlacingOrder(true);
-      const config = getAuthConfig();
       
-      if (!config) {
-        navigate("/login");
-        return;
-      }
-      if (!isValidAddress(shippingAddress)) {
+      // Use the shipping address from Redux store
+      const currentShippingAddress = shippingAddress;
+      
+      if (!isValidAddress(currentShippingAddress)) {
         setError("Please provide a complete shipping address with full name, street, city, state, ZIP code, and phone number");
         setIsPlacingOrder(false);
         return;
       }
+      
       if (!cart || cart.length === 0) {
         setError("Your cart is empty. Please add items before placing an order.");
         setIsPlacingOrder(false);
@@ -113,7 +91,7 @@ const Order = () => {
           quantity: item.quantity,
           image: item.imageUrl
         })),
-        shippingAddress: shippingAddress,
+        shippingAddress: currentShippingAddress,
         paymentMethod: "Cash on Delivery",
         subtotal: breakdown.subtotal,
         shippingFee: breakdown.shippingFee,
@@ -121,17 +99,20 @@ const Order = () => {
         total: breakdown.total
       };
       
+      console.log("Order payload:", orderPayload);
+      
       const response = await axios.post(
         'http://localhost:3200/api/orders/postorders',
         orderPayload,
-        config
+        { withCredentials: true } // Send cookies with the request
       );
+      
       setOrderConfirmation({
         id: response.data._id || response.data.id,
         status: response.data.status || 'confirmed',
         items: response.data.items || cart,
         total: response.data.total || breakdown.total,
-        shippingAddress: response.data.shippingAddress || shippingAddress,
+        shippingAddress: response.data.shippingAddress || currentShippingAddress,
         createdAt: response.data.createdAt || new Date().toISOString()
       });
       
@@ -176,7 +157,10 @@ const Order = () => {
     return 'An unknown error occurred';
   };
 
-  if (isLoading && !shippingAddress) {
+  // Combine loading states
+  const isLoadingData = shippingLoading;
+
+  if (isLoadingData && !shippingAddress) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
@@ -187,12 +171,13 @@ const Order = () => {
     );
   }
 
-  if (error) {
+  if (shippingError || error) {
+    const displayError = shippingError || error;
     return (
       <div className="max-w-2xl mx-auto mt-8 p-6 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-md">
         <h3 className="text-xl font-bold text-red-800 mb-2">Error</h3>
         <p className="text-red-700 mb-4 whitespace-pre-line">
-          {getErrorMessage(error)}
+          {getErrorMessage(displayError)}
         </p>
         <button
           onClick={() => navigate(id ? '/orders' : '/cart')}

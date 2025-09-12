@@ -1,24 +1,30 @@
-
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const getaccessToken = () => {
-  return localStorage.getItem("token");
-};
 export const fetchShippingAddress = createAsyncThunk(
   "shipping/fetchShippingAddress",
   async (_, { rejectWithValue }) => {
     try {
-      const accessToken = getaccessToken();
       const response = await axios.get(
         "http://localhost:3200/api/user-shipping",
         {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+          withCredentials: true, // Enable cookies to be sent automatically
         }
       );
-      return response.data;
+      
+      // Handle different response structures
+      let shippingAddress = null;
+      
+      if (response.data && response.data.shipping && response.data.shipping.length > 0) {
+        const shippingData = response.data.shipping[0];
+        if (shippingData.shippingAddress) {
+          shippingAddress = shippingData.shippingAddress;
+        }
+      } else if (response.data && response.data.shippingAddress) {
+        shippingAddress = response.data.shippingAddress;
+      }
+      
+      return shippingAddress;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch shipping address"
@@ -26,18 +32,16 @@ export const fetchShippingAddress = createAsyncThunk(
     }
   }
 );
+
 export const createOrUpdateShipping = createAsyncThunk(
   "shipping/createOrUpdateShipping",
   async (shippingData, { rejectWithValue }) => {
     try {
-      const accessToken = getaccessToken();
       const response = await axios.post(
         "http://localhost:3200/api/shipping",
         shippingData,
         {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+          withCredentials: true, // Enable cookies to be sent automatically
         }
       );
       return response.data;
@@ -53,7 +57,7 @@ const shippingSlice = createSlice({
   name: "shipping",
   initialState: {
     loading: true,
-    data: [],
+    data: null,
     error: null,
     selectedShipping: null,
     saveLoading: false,
@@ -72,7 +76,7 @@ const shippingSlice = createSlice({
     },
     resetShippingState: (state) => {
       state.loading = true;
-      state.data = [];
+      state.data = null;
       state.error = null;
       state.selectedShipping = null;
       state.saveLoading = false;
@@ -88,10 +92,7 @@ const shippingSlice = createSlice({
       .addCase(fetchShippingAddress.fulfilled, (state, action) => {
         state.loading = false;
         state.data = action.payload;
-        if (action.payload && action.payload.length > 0 && 
-            action.payload[0].shippingAddress) {
-          state.selectedShipping = action.payload[0].shippingAddress;
-        }
+        state.selectedShipping = action.payload;
         state.error = null;
       })
       .addCase(fetchShippingAddress.rejected, (state, action) => {
@@ -108,6 +109,7 @@ const shippingSlice = createSlice({
         state.saveLoading = false;
         if (action.payload && action.payload.shippingAddress) {
           state.selectedShipping = action.payload.shippingAddress;
+          state.data = action.payload.shippingAddress;
         }
         state.saveError = null;
       })

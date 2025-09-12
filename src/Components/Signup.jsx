@@ -7,37 +7,17 @@ import { IoLogoGoogle, IoMdEye, IoMdEyeOff } from 'react-icons/io';
 const Signup = () => {
   const navigate = useNavigate();
   const [togglePassword, setTogglePassword] = useState(true);
-  const [toggle, setToggle] = useState(null);
   const [unsuccess, setUnsuccess] = useState(null);
   const [success, setSuccess] = useState(null);
   const [getusersAuth, setGetusersAuth] = useState([]);
   const [postAuth, setPostAuth] = useState([]);
-  const [token, setToken] = useState(localStorage.getItem("token"));
-
-  const getaccesToken = ()=>{
-    return localStorage.getItem("token")
-
-    
-  }
-  useEffect(() => {
-    const fetchOneUser = async (userId) => {
-      try {
-        const accessToken = getaccesToken()
-        const response = await axios.get(`http://localhost:3200/auth/verify/${userId}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        setGetusersAuth(response.data);
-      } catch (error) {
-        console.error("Error fetching user:", error.message);
-      }
-    };
-    fetchOneUser();
-  }, []);
 
   useEffect(() => {
     const fetchApi = async () => {
       try { 
-        const response = await axios.get("http://localhost:3200/auth/registers");
+        const response = await axios.get("http://localhost:3200/auth/registers", {
+          withCredentials: true
+        });
         setGetusersAuth(response.data);
       } catch (error) {
         console.error("Error fetching users:", error.message);
@@ -50,19 +30,20 @@ const Signup = () => {
 
   const onSubmit = async (data) => {
     try {
-      const response = await axios.post("http://localhost:3200/auth/registers", data);
+      const response = await axios.post("http://localhost:3200/auth/registers", data, {
+        withCredentials: true
+      });
       setPostAuth(response.data);
       setSuccess(response.data);
       reset();
       navigate("/Login");
     } catch (error) {
       console.error("Signup error:", error.message);
-      setUnsuccess(error.message);
+      setUnsuccess(error.response?.data?.message || "Signup failed. Please try again.");
     }
   };
 
   const handleToggle = () => {
-    setToggle(prev => !prev);
     setTogglePassword(prev => !prev);
   };
 
@@ -76,12 +57,12 @@ const Signup = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Signup Successful!</h2>
-          <p className="text-gray-600 mb-6">Welcome to ShopSphere,!</p>
+          <p className="text-gray-600 mb-6">Welcome to ShopSphere!</p>
           <button 
-            onClick={() => navigate("/Products")} 
+            onClick={() => navigate("/Login")} 
             className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
           >
-            Continue Shopping
+            Continue to Login
           </button>
         </div>
       </div>
@@ -98,8 +79,7 @@ const Signup = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Signup Failed</h2>
-          <p className="text-gray-600 mb-4">Sorry, we couldn't create your account.</p>
-          <p className="text-gray-600 mb-6">Please check your internet connection and try again.</p>
+          <p className="text-gray-600 mb-4">{unsuccess}</p>
           <button 
             onClick={() => setUnsuccess(null)} 
             className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
@@ -275,6 +255,7 @@ const Signup = () => {
                   id="terms"
                   type="checkbox"
                   className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  required
                 />
                 <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
                   I agree to the <a href="#" className="text-indigo-600 hover:underline">Terms of Service</a> and <a href="#" className="text-indigo-600 hover:underline">Privacy Policy</a>

@@ -1,30 +1,16 @@
-import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import useAuth from './useAuth';
+import axios from 'axios';
 
-export default function useAuth() {
-  const navigate = useNavigate();
+function MyComponent() {
+  const { getAuthConfig, handleAuthError } = useAuth();
 
-  const getAuthConfig = useCallback(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      return null; 
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('/api/data', getAuthConfig());
+      // Handle response
+    } catch (error) {
+      const errorMessage = handleAuthError(error);
+      // Show error message to user
     }
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    };
-  }, []);
-
-  const handleAuthError = useCallback((error) => {
-    console.error('Auth error:', error);
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      navigate('/login');
-      return 'Session expired. Please login again.';
-    }
-    return error.response?.data?.message || 'Request failed';
-  }, [navigate]);
-
-  return { getAuthConfig, handleAuthError };
+  };
 }

@@ -3,9 +3,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { FaShoppingCart, FaUser, FaSearch, FaBars, FaTimes, FaCrown, FaSearchengin } from 'react-icons/fa';
 import { useContext } from 'react';
 import { CartContext } from './Cartcontext';
- import { fetchProducts } from './HomeApi';
- import { useDispatch} from 'react-redux';
- import { useSelector } from 'react-redux';
+import { fetchProducts, filterProducts } from './HomeApi';
+import { useDispatch} from 'react-redux';
+import { useSelector } from 'react-redux';
+
 const Navs = [
   { path: '/Home', name: 'Home' },
   { path: '/about', name: 'About' },
@@ -14,25 +15,26 @@ const Navs = [
 
 const Header = () => {
   const productData = useSelector((state)=>state.home.data)
-  const{cart}=useContext(CartContext)
+  const {cart} = useContext(CartContext)
   const navigate = useNavigate();
   const [toggle, setToggle] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef(null);
-  const[search,setsearch] = useState("")
+  const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch()
-   useEffect(() => {
-      const newTotal = cart.reduce((sum, item) => {
-        return sum + (item.quantity);
-      }, 0);
-      setCartCount(newTotal);
-    }, [cart]);
+  
+  useEffect(() => {
+    const newTotal = cart.reduce((sum, item) => {
+      return sum + (item.quantity);
+    }, 0);
+    setCartCount(newTotal);
+  }, [cart]);
 
-  useEffect(()=>{
+  useEffect(() => {
     dispatch(fetchProducts())
-  },[fetchProducts])
+  }, [dispatch])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,6 +52,7 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+  
   useEffect(() => {
     if (headerRef.current) {
       const headerHeight = headerRef.current.clientHeight;
@@ -71,9 +74,22 @@ const Header = () => {
 
   const handleAdmin = () => navigate('/Admin');
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      dispatch(filterProducts(searchQuery));
+      navigate('/Home');
+      setMobileMenuOpen(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    dispatch(fetchProducts()); // Reset to show all products
+  };
+
   return (
     <>
-      
       <header 
         ref={headerRef}
         className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'h-16 bg-white shadow-md' : 'h-20 bg-gradient-to-r from-blue-900 to-indigo-900'}`}
@@ -87,6 +103,7 @@ const Header = () => {
               ShopSphere
             </h1>
           </div>
+          
           <nav className="hidden md:flex items-center">
             <ul className="flex space-x-4 lg:space-x-6">
               {Navs.map((item) => (
@@ -107,20 +124,35 @@ const Header = () => {
               ))}
             </ul>
           </nav>
+          
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <div className={`hidden md:flex items-center transition-all duration-300 ${
+            <form onSubmit={handleSearch} className={`hidden md:flex items-center transition-all duration-300 ${
               scrolled ? 'bg-gray-100' : 'bg-white  bg-opacity-20'
             } rounded-full px-4 py-1`}>
-              <FaSearchengin/>
+              <FaSearchengin className={scrolled ? "text-gray-500" : "text-white"} />
               <input
-                onChange={search}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 type="text"
-                placeholder="Search..."
+                placeholder="Search products or sellers..."
                 className={`bg-transparent outline-none w-30 lg:w-70 transition-all duration-300 ${
                   scrolled ? 'text-gray-700 placeholder-gray-500' : 'text-black placeholder-white placeholder-opacity-70'
                 }`}
               />
-            </div>
+              {searchQuery && (
+                <button 
+                  type="button"
+                  onClick={clearSearch}
+                  className="ml-2 text-gray-500 hover:text-gray-700"
+                >
+                  <FaTimes />
+                </button>
+              )}
+              <button type="submit" className="ml-2">
+                <FaSearch className={scrolled ? "text-gray-500" : "text-white"} />
+              </button>
+            </form>
+            
             <div className="relative cursor-pointer group">
               <div className="relative">
                 <FaShoppingCart 
@@ -146,8 +178,7 @@ const Header = () => {
               </div>
             </div>
             
-            
-             <button 
+            <button 
               onClick={handleAdmin}
               className={`hidden md:flex items-center justify-center cursor-pointer w-24 lg:w-28 h-10 rounded-full font-medium transition-all duration-300 ${
                 scrolled 
@@ -156,9 +187,8 @@ const Header = () => {
               }`}
             >
               <FaUser className="mr-1" /> Admin
-            </button> 
+            </button>
             
-          
             <button
               onClick={handleCart}
               className={`hidden md:flex items-center justify-center cursor-pointer w-15 lg:w-20 h-10 rounded-full font-medium transition-all duration-300 ${
@@ -169,6 +199,7 @@ const Header = () => {
             >
               {toggle ? 'Signup' : 'Login'}
             </button>
+            
             <button 
               className="md:hidden z-50"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -182,6 +213,7 @@ const Header = () => {
             </button>
           </div>
         </div>
+        
         <div 
           className={`md:hidden fixed inset-0 bg-black bg-opacity-90 z-40 transition-opacity duration-300 ${
             mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -237,14 +269,27 @@ const Header = () => {
             </nav>
             
             <div className="px-6 pb-4">
-              <div className="flex items-center bg-gray-100 rounded-full px-3 py-2">
+              <form onSubmit={handleSearch} className="flex items-center bg-gray-100 rounded-full px-3 py-2">
                 <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   type="text"
-                  placeholder="Search products..."
+                  placeholder="Search products or sellers..."
                   className="bg-transparent outline-none w-full text-gray-700"
                 />
-                <FaSearch className="text-gray-500" />
-              </div>
+                {searchQuery && (
+                  <button 
+                    type="button"
+                    onClick={clearSearch}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+                <button type="submit">
+                  <FaSearch className="text-gray-500" />
+                </button>
+              </form>
             </div>
           </div>
         </div>

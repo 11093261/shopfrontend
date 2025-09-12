@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -7,9 +6,18 @@ import { IoIosBusiness, IoIosPeople, IoMdCloudUpload, IoMdImages } from 'react-i
 import { FaStore, FaPhone, FaDollarSign, FaBoxes, FaClipboard, FaLocationArrow } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaCrown, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaHome, FaRedo } from 'react-icons/fa';
+
 const FREE_POST_LIMIT = 10;
 const POSTS_PER_PAYMENT = 10;
 const PAYMENT_AMOUNT = 100; 
+
+// Helper function to get cookie value
+const getCookie = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
 
 const Register = () => {
   const dispatch = useDispatch();
@@ -33,6 +41,7 @@ const Register = () => {
   const timeoutRef = useRef(null);
 
   const { register, handleSubmit, formState: { errors }, setValue, reset } = useForm();
+  
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -40,6 +49,7 @@ const Register = () => {
       }
     };
   }, []);
+  
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const reference = urlParams.get('reference');
@@ -54,7 +64,8 @@ const Register = () => {
       window.history.replaceState({}, document.title, cleanUrl);
     } else if (reference || trxref) {
       const paymentRef = reference || trxref;
-      const processedPayments = JSON.parse(localStorage.getItem('processedPayments') || '[]');
+      // Check if payment was already processed using sessionStorage instead of localStorage
+      const processedPayments = JSON.parse(sessionStorage.getItem('processedPayments') || '[]');
       if (!processedPayments.includes(paymentRef)) {
         setPaymentReference(paymentRef);
         verifyPayment(paymentRef);
@@ -76,7 +87,8 @@ const Register = () => {
       setVerificationMessage('Verifying your payment...');
       setPaymentError(null);
       
-      const token = localStorage.getItem("token");
+      // Use getCookie instead of localStorage
+      const token = getCookie("token");
       
       if (!token) {
         setVerificationStatus('error');
@@ -97,21 +109,22 @@ const Register = () => {
         `http://localhost:3200/api/payment/verify/${reference}`,
         { 
           headers: { Authorization: `Bearer ${token}` },
-          timeout: 15000 
+          timeout: 15000,
+          withCredentials: true // Include cookies in the request
         }
       );
       
       if (response.data.success) {
-        const processedPayments = JSON.parse(localStorage.getItem('processedPayments') || '[]');
+        // Use sessionStorage for temporary storage instead of localStorage
+        const processedPayments = JSON.parse(sessionStorage.getItem('processedPayments') || '[]');
         processedPayments.push(reference);
-        localStorage.setItem('processedPayments', JSON.stringify(processedPayments));
+        sessionStorage.setItem('processedPayments', JSON.stringify(processedPayments));
         
         setVerificationStatus('success');
         setPaymentSuccess(true);
         setPaymentInProgress(false);
         setVerificationMessage('Payment verified successfully! You can now continue listing products.');
-        const currentPosts = parseInt(localStorage.getItem('userPostLimit') || '0');
-        localStorage.setItem('userPostLimit', (currentPosts + POSTS_PER_PAYMENT).toString());
+        
         await checkPostStatus();
         timeoutRef.current = setTimeout(() => {
           setPaymentRequired(false);
@@ -166,24 +179,24 @@ const Register = () => {
 
   const checkPostStatus = async () => {
     try {
-      const token = localStorage.getItem("token");
+      // Use getCookie instead of localStorage
+      const token = getCookie("token");
       if (!token) {
         console.error('No authentication token found');
         return;
       }
       
       const response = await axios.get('http://localhost:3200/api/posts/status', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true // Include cookies in the request
       });
       setPostStatus(response.data);
       setPaymentRequired(response.data.needsPayment);
-      if (response.data.remainingPaidPosts !== undefined) {
-        localStorage.setItem('userPostLimit', response.data.remainingPaidPosts.toString());
-      }
     } catch (error) {
       console.error('Error checking post status:', error);
       if (error.response && error.response.status === 401) {
-        localStorage.removeItem("token");
+        // Remove cookie by setting expiration to past date
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         navigate('/login', { state: { message: 'Session expired. Please log in again.' } });
       }
     }
@@ -195,7 +208,8 @@ const Register = () => {
     try {
       setPaymentInitializing(true);
       setPaymentError(null);
-      const token = localStorage.getItem("token");
+      // Use getCookie instead of localStorage
+      const token = getCookie("token");
       
       if (!token) {
         setPaymentError('Authentication error. Please log in again.');
@@ -206,7 +220,10 @@ const Register = () => {
       const response = await axios.post(
         'http://localhost:3200/api/payment/initialize',
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true // Include cookies in the request
+        }
       );
       
       if (response.data.authorization_url) {
@@ -257,7 +274,8 @@ const Register = () => {
   };
 
   const getAccessToken = () => {
-    return localStorage.getItem("token");
+    // Use getCookie instead of localStorage
+    return getCookie("token");
   };
 
   const onSubmit = async (data) => {
@@ -294,12 +312,11 @@ const Register = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
           "Authorization": `Bearer ${accessToken}`
-        }
+        },
+        withCredentials: true // Include cookies in the request
       });
       
       console.log(response.data);
-      const currentLimit = parseInt(localStorage.getItem('userPostLimit') || FREE_POST_LIMIT.toString());
-      localStorage.setItem('userPostLimit', (currentLimit - 1).toString());
       
       navigate("/Register", { 
         state: { 
@@ -317,7 +334,8 @@ const Register = () => {
         setPaymentError('You have exhausted your available posts. Please make a payment to continue.');
       } else if (err.response && err.response.status === 401) {
         setPaymentError('Authentication error. Please log in again.');
-        localStorage.removeItem("token");
+        // Remove cookie by setting expiration to past date
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         navigate('/login', { state: { message: 'Session expired. Please log in again.' } });
       } else if (err.response) {
         console.log(err.response.data);
@@ -362,6 +380,7 @@ const Register = () => {
     const body = encodeURIComponent(`Hello,\n\nI'm having trouble verifying my payment.\nReference Code: ${paymentReference}\n\nPlease assist.`);
     window.open(`mailto:support@yourcompany.com?subject=${subject}&body=${body}`, '_blank');
   };
+  
   const PaymentErrorNotification = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -381,6 +400,7 @@ const Register = () => {
       </div>
     </div>
   );
+  
   const PaymentModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -422,6 +442,7 @@ const Register = () => {
       </div>
     </div>
   );
+  
   const PaymentVerificationNotification = () => {
     if (verificationStatus === 'verifying') {
       return (
@@ -502,6 +523,7 @@ const Register = () => {
 
     return null;
   };
+  
   const PostStatusInfo = () => {
     if (!postStatus) return null;
     
@@ -872,4 +894,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Register;  
