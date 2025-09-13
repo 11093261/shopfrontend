@@ -25,7 +25,7 @@ const Login = () => {
         });
         
         if (response.data.user) {
-          navigate("/Home");
+          navigate("/Register");
         }
       } catch (error) {
         // Not authenticated, stay on login page

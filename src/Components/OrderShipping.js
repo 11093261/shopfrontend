@@ -8,7 +8,7 @@ export const fetchShippingAddress = createAsyncThunk(
       const response = await axios.get(
         "http://localhost:3200/api/shipping",
         {
-          withCredentials: true // Send cookies automatically
+          withCredentials: true 
         }
       );
       return response.data;

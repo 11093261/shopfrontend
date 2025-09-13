@@ -634,7 +634,7 @@ const Register = () => {
               <div>
                 <label className="flex items-center text-gray-700 font-medium mb-2">
                   <FaStore className="mr-2 text-indigo-600" />
-                  Seller Name
+                  ProductName
                 </label>
                 <input
                   {...register("sellername", { required: "Seller name is required" })}
