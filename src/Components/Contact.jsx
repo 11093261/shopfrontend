@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 import { useForm } from 'react-hook-form'
+// const old_Url = "http://localhost:3200/api/postedChat"
 import axios from "axios"
 const Contact = () => {
   const {register,handleSubmit,formState:{errors},reset} = useForm()
@@ -11,7 +13,8 @@ const Contact = () => {
       const formData = new FormData()
       formData.append("userpost",data.userpost)
       const accessToken = getaccessToken()
-      const response = await axios.post("http://localhost:3200/api/postedChat",formData,{
+      const response = await axios.post(`${API_BASE_URL}/api/postedChat`
+        ,formData,{
         headers:{
           "Authorization" : `Bearer ${accessToken}`
         }

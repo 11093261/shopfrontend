@@ -16,6 +16,7 @@ const Navs = [
 const Header = () => {
   const productData = useSelector((state)=>state.home.data)
   const {cart} = useContext(CartContext)
+
   const navigate = useNavigate();
   const [toggle, setToggle] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

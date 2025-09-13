@@ -2,8 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { CartContext } from './Cartcontext';
 import { useNavigate } from 'react-router-dom';
-
 const Cart = () => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   const { cart, removeFromCart, updateQuantity } = useContext(CartContext);
   console.log(cart)
   const navigate = useNavigate();
@@ -79,7 +79,8 @@ const Cart = () => {
       };
       console.log(orderData)
       const orderResponse = await axios.post(
-        'http://localhost:3200/api/orders/postorders',
+        `${API_BASE_URL}/api/orders/postorders`,
+        // 'http://localhost:3200/api/orders/postorders',
         orderData,
         {
           headers: {

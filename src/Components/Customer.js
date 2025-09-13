@@ -1,12 +1,14 @@
 import {createSlice} from "@reduxjs/toolkit"
 import axios from "axios"
 import {createAsyncThunk} from "@reduxjs/toolkit"
+// const oidUrl = "http://localhost:3200/api/postedChat"
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 const getAccessToken = ()=>{
     return localStorage.getItem("token")
 }
 export const postUserText = createAsyncThunk("/api/usertext",async(payload)=>{
     try {
-        const response = await axios.post("http://localhost:3200/api/postedChat",payload)
+        const response = await axios.post(`${API_BASE_URL}/api/postedChat`,payload)
         
         return response.data
     } catch (error) {
