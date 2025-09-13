@@ -10,7 +10,7 @@ import { useSelector } from 'react-redux';
 const Navs = [
   { path: '/Home', name: 'Home' },
   { path: '/about', name: 'About' },
-  { path: '/contact', name: 'Contact' }
+  // { path: '/contact', name: 'Contact' }
 ];
 
 const Header = () => {
