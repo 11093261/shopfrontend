@@ -1,13 +1,18 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+// const getorders = {
+//   getorder:`http://localhost:3200/api/order/getorders/${id}`,
+//   getrefresh:"http://localhost:3200/auth/refresh"
+// }
 
 export const fetchOrderProduct = createAsyncThunk(
   "/api/getseller",
   async (id, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        `http://localhost:3200/api/order/getorders/${id}`,
+        `${API_BASE_URL}/api/order/getorders/${id}`,
         {
           withCredentials: true // This sends cookies with the request
         }

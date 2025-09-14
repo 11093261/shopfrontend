@@ -1,12 +1,22 @@
 // HomeApi.js
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+//  const products = {
+//    product:"http://localhost:3200/api/product",
+//    seller:`http://localhost:3200/api/seller/${sellerId}`,
+//   fresh:"http://localhost:3200/auth/refresh"
 
+// }
 export const fetchProducts = createAsyncThunk(
   "home/fetchProducts",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get("http://localhost:3200/api/product");
+      const response = await axios.get(`${API_BASE_URL}/api/product`,
+        {
+        withCredientials:true
+      }
+    );
       return response.data;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -30,7 +40,7 @@ export const fetchSellerById = createAsyncThunk(
   async (sellerId, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        `http://localhost:3200/api/seller/${sellerId}`,
+        `${API_BASE_URL}/api/seller/${sellerId}`,
         {
           withCredentials: true // This sends cookies with the request
         }
@@ -67,7 +77,7 @@ export const refreshToken = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        "http://localhost:3200/auth/refresh",
+        `${API_BASE_URL}/auth/refresh`,
         {
           withCredentials: true
         }

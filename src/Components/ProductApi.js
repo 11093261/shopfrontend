@@ -3,9 +3,11 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import axios from "axios"
 const BaseUrl = "http://localhost:3200/api/seller"
 export const postSellerProduct = createAsyncThunk("/api/products",async(payload)=>{
-    const response = await axios.post(BaseUrl,payload)
+    const response = await axios.post(BaseUrl,payload,{
+        withCredentials:true
+    })
+    return response.data
 })
-
 const sellerSlice = createSlice({
     name:"products",
     initialState:{

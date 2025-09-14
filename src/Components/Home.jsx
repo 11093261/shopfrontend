@@ -183,7 +183,7 @@ const Home = () => {
                 <div key={product.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
                   <div className="relative overflow-hidden">
                     <img 
-                      src={product.image || "https://via.placeholder.com/300x300?text=Product+Image"} 
+                      src={product.imageUrl || "https://via.placeholder.com/300x300?text=Product+Image"} 
                       alt={product.name}
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />

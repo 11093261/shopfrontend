@@ -5,10 +5,17 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 const Login = () => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   const navigate = useNavigate();
   const [loading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(null);
+  // const userauth = {
+  //   loginUser:`http://localhost:3200/auth/verify/${id}`,
+  //   postuserLogin:"http://localhost:3200/auth/login",
+  //   refresh:"http://localhost:3200/auth/refresh"
+
+  // }
 
   const { 
     register, 
@@ -20,7 +27,7 @@ const Login = () => {
     // Check if user is already authenticated
     const checkAuthStatus = async (id) => {
       try {
-        const response = await axios.get(`http://localhost:3200/auth/verify/${id}`, {
+        const response = await axios.get(`${API_BASE_URL}/auth/verify/${id}`, {
           withCredentials: true
         });
         
@@ -42,7 +49,7 @@ const Login = () => {
       setError('');
       
       const response = await axios.post(
-        "http://localhost:3200/auth/login", 
+        `${API_BASE_URL}/auth/login`, 
         data, 
         { 
           headers: { "Content-Type": "application/json" },
@@ -101,7 +108,7 @@ const Login = () => {
   // Function to handle token refresh
   const refreshToken = async () => {
     try {
-      const response = await axios.get("http://localhost:3200/auth/refresh", {
+      const response = await axios.get(`${API_BASE_URL}/auth/refresh`, {
         withCredentials: true
       });
       

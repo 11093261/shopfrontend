@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { IoLogoGoogle, IoMdEye, IoMdEyeOff } from 'react-icons/io';
 
 const Signup = () => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   const navigate = useNavigate();
   const [togglePassword, setTogglePassword] = useState(true);
   const [unsuccess, setUnsuccess] = useState(null);
@@ -12,25 +13,25 @@ const Signup = () => {
   const [getusersAuth, setGetusersAuth] = useState([]);
   const [postAuth, setPostAuth] = useState([]);
 
-  useEffect(() => {
-    const fetchApi = async () => {
-      try { 
-        const response = await axios.get("http://localhost:3200/auth/registers", {
-          withCredentials: true
-        });
-        setGetusersAuth(response.data);
-      } catch (error) {
-        console.error("Error fetching users:", error.message);
-      }
-    };
-    fetchApi();
-  }, []);
+  // useEffect(() => {
+  //   const fetchApi = async () => {
+  //     try { 
+  //       const response = await axios.get(`${API_BASE_URL}/auth/registers`, {
+  //         withCredentials: true
+  //       });
+  //       setGetusersAuth(response.data);
+  //     } catch (error) {
+  //       console.error("Error fetching users:", error.message);
+  //     }
+  //   };
+  //   fetchApi();
+  // }, [API_BASE_URL]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   const onSubmit = async (data) => {
     try {
-      const response = await axios.post("http://localhost:3200/auth/registers", data, {
+      const response = await axios.post(`${API_BASE_URL}/auth/registers`, data, {
         withCredentials: true
       });
       setPostAuth(response.data);

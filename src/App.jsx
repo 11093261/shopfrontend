@@ -7,14 +7,14 @@ import Body from './Body'
 import Home from './Components/Home'
 // import Products from './Components/Products'
 import Contact from './Components/Contact'
-import Cart from './Components/Cart'
 import Register from './Components/Register'
 import Payment from './Components/Payment'
+import Cart from "./Components/Cart"
 import Signup from './Components/Signup'
 import Login from './Components/Login'
 import Admin from './Components/Admin'
 import AdminLogin from './Components/AdminLogin'
-import Log from './Components/Log'
+// import Log from './Components/Log'
 import Order from './Components/Order'
 import { CartProvider } from './Components/Cartcontext'
 import { Userscontext } from './Components/Usercontext'
@@ -47,7 +47,7 @@ function App() {
           <Route path='Login' element={<Login/>}/>
           <Route path='Admin' element={<Admin/>}/>
           <Route path='AdminLogin' element={<AdminLogin/>}/>
-          <Route path='Log' element={<Log/>}/>
+          {/* <Route path='Log' element={<Log/>}/> */}
           <Route path='Order' element={<Order/>}/>
           <Route path="/ShippingAddress" element={<ShippingAddress />} />
           <Route path="/payment" element={<Payment />} />
