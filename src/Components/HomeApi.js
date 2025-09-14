@@ -13,9 +13,7 @@ export const fetchProducts = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/product`,
-        {
-        withCredientials:true
-      }
+      
     );
       return response.data;
     } catch (error) {
