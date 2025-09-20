@@ -1,8 +1,4 @@
-import { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
-import './App.css';
-import { Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Body from './Body';
 import Home from './Components/Home';
 import Contact from './Components/Contact';
@@ -23,34 +19,32 @@ import Seller from './Components/Seller';
 
 function App() {
   return (
-    <main>
-      <Userscontext>
-        <CartProvider>
-          <Routes>
-            <Route path='' element={<Body/>}>
-              {/* Set Home as the default index route */}
-              <Route index element={<Home/>} />
-              {/* <Route path='Products' element={<Products/>}/> */}
-              <Route path="About" element={<About/>}/>
-              <Route path='Contact' element={<Contact/>}/>
-              <Route path='Cart' element={<Cart/>}/>
-              <Route path='Register' element={<Register/>}/>
-              <Route path='Payment' element={<Payment/>}/>
-              <Route path='Signup' element={<Signup/>}/>
-              <Route path='Login' element={<Login/>}/>
-              <Route path='Admin' element={<Admin/>}/>
-              <Route path='AdminLogin' element={<AdminLogin/>}/>
-              {/* <Route path='Log' element={<Log/>}/> */}
-              <Route path='Order' element={<Order/>}/>
-              <Route path="/ShippingAddress" element={<ShippingAddress />} />
-              <Route path="/payment" element={<Payment />} />
-              <Route path="OrderConfirmation" element={<OrderConfirmation />}/>
-              <Route path="Seller" element={<Seller/>}/>
-            </Route>
-          </Routes>
-        </CartProvider>
-      </Userscontext>
-    </main>
+    <Router>
+      <main>
+        <Userscontext>
+          <CartProvider>
+            <Routes>
+              <Route path='/' element={<Body/>}>
+                <Route path='/Home' index element={<Home/>} />
+                <Route path="about" element={<About/>}/>
+                <Route path='contact' element={<Contact/>}/>
+                <Route path='cart' element={<Cart/>}/>
+                <Route path='register' element={<Register/>}/>
+                <Route path='payment' element={<Payment/>}/>
+                <Route path='signup' element={<Signup/>}/>
+                <Route path='login' element={<Login/>}/>
+                <Route path='admin' element={<Admin/>}/>
+                <Route path='adminlogin' element={<AdminLogin/>}/>
+                <Route path='order' element={<Order/>}/>
+                <Route path="shippingaddress" element={<ShippingAddress />} />
+                <Route path="orderconfirmation" element={<OrderConfirmation />}/>
+                <Route path="seller" element={<Seller/>}/>
+              </Route>
+            </Routes>
+          </CartProvider>
+        </Userscontext>
+      </main>
+    </Router>
   );
 }
 

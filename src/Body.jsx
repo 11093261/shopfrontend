@@ -1,20 +1,17 @@
-import React from 'react'
-import Header from './Components/Header'
-import { Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom';
+import Header from './Components/Header'; // Import your Header component
+// import Footer from './Components/Footer'; // Import your Footer component
 
-
-
-const Body = () => {
+function Body() {
   return (
-    <main>
-      <Header/>
-      <Outlet/>
-      
-      
-        
-      
-    </main>
-  )
+    <div className="app-container">
+      <main className="main-content">
+        <Header />
+        <Outlet />
+      </main>
+    
+    </div>
+  );
 }
 
-export default Body
+export default Body;
