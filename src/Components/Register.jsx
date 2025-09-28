@@ -9,9 +9,7 @@ import { FaCrown, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaHome, F
 
 const FREE_POST_LIMIT = 10;
 const POSTS_PER_PAYMENT = 10;
-const PAYMENT_AMOUNT = 100; 
-
-// Helper function to get cookie value
+const PAYMENT_AMOUNT = 100;
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -39,6 +37,15 @@ const Register = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const timeoutRef = useRef(null);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+  //  const oldApi = {
+  //    getPayment:"http://localhost:3200/api/payment/verify/${reference}",
+  //    getPostStatus:"'http://localhost:3200/api/posts/status'",
+  //    postpaymentini:"http://localhost:3200/api/payment/initialize",
+  //    postSeller:"http://localhost:3200/api/seller"
+
+
+  // }
 
   const { register, handleSubmit, formState: { errors }, setValue, reset } = useForm();
   
@@ -64,7 +71,6 @@ const Register = () => {
       window.history.replaceState({}, document.title, cleanUrl);
     } else if (reference || trxref) {
       const paymentRef = reference || trxref;
-      // Check if payment was already processed using sessionStorage instead of localStorage
       const processedPayments = JSON.parse(sessionStorage.getItem('processedPayments') || '[]');
       if (!processedPayments.includes(paymentRef)) {
         setPaymentReference(paymentRef);
@@ -86,8 +92,6 @@ const Register = () => {
       setVerificationStatus('verifying');
       setVerificationMessage('Verifying your payment...');
       setPaymentError(null);
-      
-      // Use getCookie instead of localStorage
       const token = getCookie("token");
       
       if (!token) {
@@ -106,16 +110,15 @@ const Register = () => {
       }
       
       const response = await axios.get(
-        `http://localhost:3200/api/payment/verify/${reference}`,
+        `${API_BASE_URL}/api/payment/verify/${reference}`,
         { 
           headers: { Authorization: `Bearer ${token}` },
           timeout: 15000,
-          withCredentials: true // Include cookies in the request
+          withCredentials: true 
         }
       );
       
       if (response.data.success) {
-        // Use sessionStorage for temporary storage instead of localStorage
         const processedPayments = JSON.parse(sessionStorage.getItem('processedPayments') || '[]');
         processedPayments.push(reference);
         sessionStorage.setItem('processedPayments', JSON.stringify(processedPayments));
@@ -179,23 +182,21 @@ const Register = () => {
 
   const checkPostStatus = async () => {
     try {
-      // Use getCookie instead of localStorage
       const token = getCookie("token");
       if (!token) {
         console.error('No authentication token found');
         return;
       }
       
-      const response = await axios.get('http://localhost:3200/api/posts/status', {
+      const response = await axios.get(`${API_BASE_URL}/api/posts/status`, {
         headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true // Include cookies in the request
+        withCredentials: true 
       });
       setPostStatus(response.data);
       setPaymentRequired(response.data.needsPayment);
     } catch (error) {
       console.error('Error checking post status:', error);
       if (error.response && error.response.status === 401) {
-        // Remove cookie by setting expiration to past date
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         navigate('/login', { state: { message: 'Session expired. Please log in again.' } });
       }
@@ -218,11 +219,10 @@ const Register = () => {
       }
       
       const response = await axios.post(
-        'http://localhost:3200/api/payment/initialize',
-        {},
+        `${API_BASE_URL}/api/payment/initialize`,
         { 
           headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true // Include cookies in the request
+          withCredentials: true 
         }
       );
       
@@ -274,7 +274,6 @@ const Register = () => {
   };
 
   const getAccessToken = () => {
-    // Use getCookie instead of localStorage
     return getCookie("token");
   };
 
@@ -308,12 +307,12 @@ const Register = () => {
         return;
       }
       
-      const response = await axios.post('http://localhost:3200/api/seller', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/seller`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           "Authorization": `Bearer ${accessToken}`
         },
-        withCredentials: true // Include cookies in the request
+        withCredentials: true 
       });
       
       console.log(response.data);

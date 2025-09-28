@@ -14,25 +14,19 @@ export const fetchOrderProduct = createAsyncThunk(
       const response = await axios.get(
         `${API_BASE_URL}/api/order/getorders/${id}`,
         {
-          withCredentials: true // This sends cookies with the request
+          withCredentials: true
         }
       );
       return response.data;
     } catch (error) {
       console.error("Error fetching order product:", error);
-      
-      // Handle specific error cases
       if (error.response?.status === 401) {
-        // Unauthorized - token expired or invalid
         return rejectWithValue("Authentication failed. Please login again.");
       } else if (error.response?.status === 403) {
-        // Forbidden - user doesn't have permission
         return rejectWithValue("You don't have permission to access this resource.");
       } else if (error.response?.status === 404) {
-        // Not found - order doesn't exist
         return rejectWithValue("Order not found.");
       } else if (!error.response) {
-        // Network error
         return rejectWithValue("Network error. Please check your connection.");
       }
       
@@ -40,8 +34,6 @@ export const fetchOrderProduct = createAsyncThunk(
     }
   }
 );
-
-// Optional: Add a token refresh thunk if needed
 export const refreshToken = createAsyncThunk(
   "auth/refreshToken",
   async (_, { rejectWithValue }) => {
@@ -68,11 +60,9 @@ const orderproductSlice = createSlice({
     error: null
   },
   reducers: {
-    // Clear error state
     clearError: (state) => {
       state.error = null;
     },
-    // Reset state when component unmounts
     resetOrderState: (state) => {
       state.loading = true;
       state.data = [];
@@ -94,11 +84,8 @@ const orderproductSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       });
-      
-    // Optional: Handle token refresh cases if implemented
     builder
       .addCase(refreshToken.fulfilled, (state) => {
-        // Token refreshed successfully
         state.error = null;
       })
       .addCase(refreshToken.rejected, (state, action) => {

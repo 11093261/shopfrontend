@@ -1,15 +1,15 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 export const postTextMessage = createAsyncThunk(
   "/api/gettext",
   async (payload, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:3200/api/postsellertext",
+        `${API_BASE_URL}/api/postsellertext`,
         payload,
         {
-          withCredentials: true, // Enable cookies to be sent automatically
+          withCredentials: true, 
         }
       );
       return response.data;

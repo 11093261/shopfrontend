@@ -1,9 +1,10 @@
 import {createSlice} from "@reduxjs/toolkit"
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import axios from "axios"
-const BaseUrl = "http://localhost:3200/api/seller"
+// const BaseUrl = "http://localhost:3200/api/seller"
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 export const postSellerProduct = createAsyncThunk("/api/products",async(payload)=>{
-    const response = await axios.post(BaseUrl,payload,{
+    const response = await axios.post(`${API_BASE_URL}/api/seller`,payload,{
         withCredentials:true
     })
     return response.data

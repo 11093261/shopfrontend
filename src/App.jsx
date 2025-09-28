@@ -24,8 +24,8 @@ function App() {
         <Userscontext>
           <CartProvider>
             <Routes>
-              <Route path='/' element={<Body/>}>
-                <Route path='/Home' index element={<Home/>} />
+              <Route  element={<Body/>}>
+                <Route path='/' index element={<Home/>} />
                 <Route path="about" element={<About/>}/>
                 <Route path='contact' element={<Contact/>}/>
                 <Route path='cart' element={<Cart/>}/>

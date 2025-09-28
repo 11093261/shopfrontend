@@ -14,6 +14,8 @@ const Order = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderConfirmation, setOrderConfirmation] = useState(null);
   const { cart } = useContext(CartContext);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+  // const OldApi = "http://localhost:3200/api/orders/postorders"
   
   // Get shipping data from Redux store
   const { 
@@ -102,7 +104,7 @@ const Order = () => {
       console.log("Order payload:", orderPayload);
       
       const response = await axios.post(
-        'http://localhost:3200/api/orders/postorders',
+        `${API_BASE_URL}/api/orders/postorders`,
         orderPayload,
         { withCredentials: true } // Send cookies with the request
       );

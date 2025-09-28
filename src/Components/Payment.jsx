@@ -9,6 +9,8 @@ const Payment = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+  // const oldApi = "http://localhost:3200/api/orderpayment"
   
   const { 
     shippingAddress, 
@@ -26,16 +28,12 @@ const Payment = () => {
         setError("Please select a payment method");
         return;
       }
-
-      // If you need to make an API call to process payment method selection
-      const response = await axios.post("http://localhost:3200/api/orderpayment", 
+      const response = await axios.post(`${API_BASE_URL}/api/orderpayment`, 
         { paymentMethod: selectedPaymentMethod },
         {
-          withCredentials: true // Send cookies automatically
+          withCredentials: true 
         }
       );
-
-      // If the API returns payment method data (optional)
       if (response.data) {
         console.log("Payment method processed:", response.data);
       }
@@ -50,7 +48,7 @@ const Payment = () => {
 
     } catch (error) {
       let errorMessage = "Failed to process payment method";
-      
+      6
       if (error.response) {
         if (error.response.status === 401) {
           errorMessage = "Please login to continue";

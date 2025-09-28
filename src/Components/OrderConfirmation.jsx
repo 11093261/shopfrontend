@@ -9,6 +9,8 @@ const OrderConfirmation = () => {
   const [orderId, setorderId] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+  // const oldApi = "http://localhost:3200/api/orders/getorders"
 
   const handleOrder = () => navigate("/Order");
 
@@ -18,8 +20,8 @@ const OrderConfirmation = () => {
         setLoading(true);
         setError(null);
         
-        const response = await axios.get("http://localhost:3200/api/orders/getorders", {
-          withCredentials: true // Send cookies automatically
+        const response = await axios.get(`${API_BASE_URL}/api/orders/getorders`, {
+          withCredentials: true 
         });
         
         console.log(response.data);

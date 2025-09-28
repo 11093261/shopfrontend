@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+// const oldApi = "http://localhost:3200/api/shipping"
 
 export const fetchShippingAddress = createAsyncThunk(
   "shipping/fetchShippingAddress",
@@ -10,11 +11,9 @@ export const fetchShippingAddress = createAsyncThunk(
         `${API_BASE_URL}/api/user-shipping`,
        
         {
-          withCredentials: true, // Enable cookies to be sent automatically
+          withCredentials: true,
         }
       );
-      
-      // Handle different response structures
       let shippingAddress = null;
       
       if (response.data && response.data.shipping && response.data.shipping.length > 0) {
@@ -40,10 +39,10 @@ export const createOrUpdateShipping = createAsyncThunk(
   async (shippingData, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:3200/api/shipping",
+        `${API_BASE_URL }/api/shipping`,
         shippingData,
         {
-          withCredentials: true, // Enable cookies to be sent automatically
+          withCredentials: true, 
         }
       );
       return response.data;

@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 
 export const getUserText = createAsyncThunk(
   "/api/usertext",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get("http://localhost:3200/api/getChat", {
-        withCredentials: true, // Enable cookies to be sent automatically
+      const response = await axios.get(`${ API_BASE_URL}/api/getChat`, {
+        withCredentials: true,
       });
       return [...response.data];
     } catch (error) {

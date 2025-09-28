@@ -8,7 +8,7 @@ import { useDispatch} from 'react-redux';
 import { useSelector } from 'react-redux';
 
 const Navs = [
-  { path: '/Home', name: 'Home' },
+  { path: '/', name: 'Home' },
   { path: '/about', name: 'About' },
   // { path: '/contact', name: 'Contact' }
 ];
@@ -101,7 +101,7 @@ const Header = () => {
               <FaCrown className="text-white text-xl" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-              ShopSphere
+              ShopSpher
             </h1>
           </div>
           
@@ -127,7 +127,7 @@ const Header = () => {
           </nav>
           
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <form onSubmit={handleSearch} className={`hidden md:flex items-center transition-all duration-300 ${
+            <form onSubmit={handleSearch} className={`hidden md:flex items-center gap-[10px] transition-all duration-300 ${
               scrolled ? 'bg-gray-100' : 'bg-white  bg-opacity-20'
             } rounded-full px-4 py-1`}>
               <FaSearchengin className={scrolled ? "text-gray-500" : "text-white"} />
@@ -135,7 +135,7 @@ const Header = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 type="text"
-                placeholder="Search products or sellers..."
+                placeholder="Search products "
                 className={`bg-transparent outline-none w-30 lg:w-70 transition-all duration-300 ${
                   scrolled ? 'text-gray-700 placeholder-gray-500' : 'text-black placeholder-white placeholder-opacity-70'
                 }`}
@@ -149,9 +149,9 @@ const Header = () => {
                   <FaTimes />
                 </button>
               )}
-              <button type="submit" className="ml-2">
+              {/* <button type="submit" className="ml-2">
                 <FaSearch className={scrolled ? "text-gray-500" : "text-white"} />
-              </button>
+              </button> */}
             </form>
             
             <div className="relative cursor-pointer group">
@@ -179,7 +179,7 @@ const Header = () => {
               </div>
             </div>
             
-            <button 
+            {/* <button 
               onClick={handleAdmin}
               className={`hidden md:flex items-center justify-center cursor-pointer w-24 lg:w-28 h-10 rounded-full font-medium transition-all duration-300 ${
                 scrolled 
@@ -188,7 +188,7 @@ const Header = () => {
               }`}
             >
               <FaUser className="mr-1" /> Admin
-            </button>
+            </button> */}'
             
             <button
               onClick={handleCart}

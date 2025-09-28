@@ -7,6 +7,8 @@ import {
   IoSend, IoClose, IoBusiness, IoPerson, IoVideocam, IoEllipsisVertical 
 } from 'react-icons/io5';
 import io from 'socket.io-client';
+import {fetchOrderInfo} from "../Components/Getorderinfo"
+
 
 // Helper function to get cookie value
 const getCookie = (name) => {
@@ -16,11 +18,13 @@ const getCookie = (name) => {
   return null;
 };
 
+
 const Seller = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { selectedSeller, sellerLoading, sellerError } = useSelector((state) => state.home);
   const currentUser = useSelector((state) => state.auth?.user || null);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -32,6 +36,8 @@ const Seller = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState('');
   const [unreadCounts, setUnreadCounts] = useState({});
+  const userOrdersInfo = useSelector((state)=>state.getorderInfo)
+  const [showUserInfo,setUserInfo]=useState(userOrdersInfo)
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -52,7 +58,7 @@ const Seller = () => {
       // Use getCookie instead of localStorage
       const token = getCookie('token');
       
-      socketRef.current = io('http://localhost:3200', {
+      socketRef.current = io(`${API_BASE_URL}`, {
         auth: {
           token: token
         },
@@ -62,7 +68,7 @@ const Seller = () => {
           userType: isSellerView ? 'seller' : 'buyer',
           userName: currentUser?.name || 'Guest User'
         },
-        withCredentials: true // Include cookies in the request
+        withCredentials: true 
       });
 
       socketRef.current.on('connect', () => {
@@ -288,13 +294,37 @@ const Seller = () => {
       return messageTime.toLocaleDateString();
     }
   };
+  useEffect(()=>{
+    try{
+      dispatch(fetchOrderInfo())
+    }catch(error){
+      console.log(error)
+    }
+  },[dispatch])
 
   if (sellerLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-gray-700 space-y-2">
+              {showUserInfo ?(
+                <div className='flex flex-col justify-center items-center h-[40vh] md:w-[100%] w-[50%] sm:w-[50%]'>
+                  <p className="font-medium">{userOrdersInfo.fullName}</p>
+                  <p>{userOrdersInfo.street}</p>
+                  <p>{userOrdersInfo.city}, {userOrdersInfo.state} {userOrdersInfo.zip}</p>
+                  <p>Phone: {userOrdersInfo.phone}</p>
+                </div>
+
+              ):(
+                <p>........</p>
+              )
+              }
+            </div>
+                
+              
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading seller information...</p>
+
         </div>
       </div>
     );

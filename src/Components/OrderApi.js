@@ -2,17 +2,18 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import { createSlice } from "@reduxjs/toolkit"
 import axios from "axios"
 
-const BaseUrl = "http://localhost:3200/api/orders/postorders"
+// const BaseUrl = "http://localhost:3200/api/orders/postorders"
+ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 
 export const postOrders = createAsyncThunk("/api/orders", async (payload) => {
     try {
-        const response = await axios.post(BaseUrl, payload, {
-            withCredentials: true // This sends cookies automatically
+        const response = await axios.post(`${API_BASE_URL}/api/orders/postorders`, payload, {
+            withCredentials: true
         })
         return response.data
     } catch (error) {
         console.log("Order submission error:", error)
-        throw error // Re-throw the error to handle it in the component
+        throw error 
     }
 })
 

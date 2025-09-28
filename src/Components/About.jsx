@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 const About = () => {
   const navigate = useNavigate()
   const handlecall = ()=>{
-    window.location.href="08086622565"
+    const phonecontact = '08086622565'
+    window.location.href=`${phonecontact}`
   }
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -14,7 +15,7 @@ const About = () => {
         </div>                                                                         
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">About ShopSphere</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">About ShopSpher</h1>
             <p className="text-xl md:text-2xl mb-8 leading-relaxed">
               Your Trusted Desti                                                                                                                                                                                                                                                                                                                                   nation for Quality Products and Exceptional Service
             </p>
@@ -41,7 +42,7 @@ const About = () => {
             <h2 className="text-3xl font-bold mb-4 text-gray-800">Our Story</h2>
             <div className="w-20 h-1 bg-amber-500 mx-auto mb-8"></div>
             <p className="text-lg text-gray-600 mb-6">
-              Founded in 2015, ShopSphere began as a small online store with a big vision: to create the most customer-centric shopping experience on the web.
+              Founded in 2025, ShopSpher began as a small online store with a big vision: to create the most customer-centric shopping experience on the web.
             </p>
             <p className="text-lg text-gray-600">
               Today, we serve millions of customers worldwide with a carefully curated selection of over 50,000 products across fashion, electronics, home goods, and more. Our mission remains the same - to make shopping simple, secure, and delightful.
@@ -52,7 +53,7 @@ const About = () => {
             <div className="bg-white p-8 rounded-xl shadow-lg text-center">
               <div className="text-5xl font-bold text-blue-800 mb-4">10M+</div>
               <h3 className="text-xl font-semibold mb-2">Happy Customers</h3>
-              <p className="text-gray-600">Served across 120 countries</p>
+              <p className="text-gray-600">Served across 36 states in Nigeria</p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg text-center">
               <div className="text-5xl font-bold text-blue-800 mb-4">50K+</div>
@@ -89,16 +90,16 @@ const About = () => {
                   <ul className="space-y-3">
                     <li className="flex items-start">
                       <span className="text-amber-500 mr-2">•</span>
-                      <span><strong>Standard Shipping:</strong> 3-5 business days - $4.99 or FREE on orders over $50</span>
+                      <span><strong>Standard Shipping:</strong> 3-5 business days - N2000.00 or FREE on orders over N50M</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-amber-500 mr-2">•</span>
-                      <span><strong>Express Shipping:</strong> 1-2 business days - $9.99</span>
+                      <span><strong>Express Shipping:</strong> 1-2 business days - N3000.99</span>
                     </li>
-                    <li className="flex items-start">
+                    {/* <li className="flex items-start">
                       <span className="text-amber-500 mr-2">•</span>
                       <span><strong>International Shipping:</strong> 7-14 business days - calculated at checkout</span>
-                    </li>
+                    </li> */}
                     <li className="flex items-start">
                       <span className="text-amber-500 mr-2">•</span>
                       <span>Processing time: 1-2 business days after order confirmation</span>
@@ -167,21 +168,28 @@ const About = () => {
                     <div>
                       <h5 className="font-bold text-lg mb-2">What payment methods do you accept?</h5>
                       <p className="text-gray-600">
-                        We accept all major credit/debit cards (Visa, Mastercard, American Express), PayPal, Apple Pay, Google Pay, and ShopSphere Gift Cards.
+                        We accept all major credit/debit cards (Visa, Mastercard, American Express), PayPal, Apple Pay, Google Pay, and ShopSpher Gift Cards.
                       </p>
                     </div>
                     
                     <div>
                       <h5 className="font-bold text-lg mb-2">Do you offer international shipping?</h5>
                       <p className="text-gray-600">
-                        Yes, we ship to over 120 countries worldwide. Shipping costs and delivery times vary by destination and will be calculated at checkout.
+                        Yes, we ship to all the 36 states in Nigeria. Shipping costs and delivery times vary by destination and will be calculated at checkout.
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-lg mb-2">Do I have to pay before shipping?</h5>
+                      <p className="text-gray-600">
+                        No, Please avoid any form of says that you have to pay for orders before shipping .
+                        Payment is made at the point of confirmation of orders.
                       </p>
                     </div>
                     
                     <div>
                       <h5 className="font-bold text-lg mb-2">How do I change or cancel my order?</h5>
                       <p className="text-gray-600">
-                        Please contact us immediately at support@shopsphere.com or call +1 (800) 123-4567. We can modify or cancel orders within 1 hour of placement if they haven't been processed.
+                        Please contact us immediately at support@shopspher.com or call +234 8086622565. We can modify or cancel orders within 1 hour of placement if they haven't been processed.
                       </p>
                     </div>
                   </div>
@@ -201,7 +209,7 @@ const About = () => {
                 <div className="md:w-3/4 p-8">
                   <h4 className="text-xl font-semibold mb-4 text-blue-800">Your Privacy Matters</h4>
                   <p className="mb-4 text-gray-600">
-                    At ShopSphere, we are committed to protecting your personal information and being transparent about how we collect, use, and share it.
+                    At ShopSpher, we are committed to protecting your personal information and being transparent about how we collect, use, and share it.
                   </p>
                   
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -273,12 +281,12 @@ const About = () => {
             <button onClick={handlecall} className="bg-amber-500 cursor-pointer hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
               Contact Support
             </button>
-            <button onClick={()=>navigate("/Contact")} className="bg-transparent border-2 border-white hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-full transition duration-300">
+            <button className="bg-transparent border-2 border-white hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-full transition duration-300">
               Live Chat
             </button>
           </div>
           <p className="mt-8 text-blue-200">
-            Call us: +234 (80) 866-22565 | Email: support@shopsphere.com
+            Call us: +2348086622565 | Email: support@shopspher.com
           </p>
         </div>
       </section>
@@ -291,7 +299,7 @@ const About = () => {
                   <FaCrown className="text-white text-xl" />
                 </div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-                  ShopSphere
+                  ShopSpher
                 </h1>
               </div>
               <p className="mt-4 text-gray-400 max-w-xs">

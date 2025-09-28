@@ -6,8 +6,6 @@ const Usercontext = createContext({
 
 const Userscontext = ({ children }) => {
     const [postAuth, setPostAuth] = useState([]);
-
-    // Function to get cookie value by name
     const getCookie = (name) => {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
@@ -16,7 +14,7 @@ const Userscontext = ({ children }) => {
     };
 
     useEffect(() => {
-        // Get data from HTTP cookie instead of localStorage
+        
         const cookieData = getCookie("post");
         if (cookieData) {
             try {
@@ -27,8 +25,6 @@ const Userscontext = ({ children }) => {
             }
         }
     }, []);
-
-    // Listen for cookie changes (optional)
     useEffect(() => {
         const checkCookieChange = () => {
             const cookieData = getCookie("post");
@@ -43,8 +39,6 @@ const Userscontext = ({ children }) => {
                 }
             }
         };
-
-        // Check for cookie changes every second
         const interval = setInterval(checkCookieChange, 1000);
         return () => clearInterval(interval);
     }, [postAuth]);

@@ -167,7 +167,7 @@ const Home = () => {
       <section id="products" className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Featured Products</h2>
+            <h2 className="text-3xl font-bold text-gray-900 text-indigo-800">Featured Products</h2>
             <button 
               onClick={() => setIsFilterOpen(true)}
               className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
@@ -264,8 +264,8 @@ const Home = () => {
                     className="w-full"
                   />
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>${priceRange[0]}</span>
-                    <span>${priceRange[1]}</span>
+                    <span>N{priceRange[0]}</span>
+                    <span>N{priceRange[1]}</span>
                   </div>
                 </div>
               </div>
@@ -282,7 +282,7 @@ const Home = () => {
                   <option value="electronics">Electronics</option>
                   <option value="clothing">Clothing</option>
                   <option value="home">Home & Garden</option>
-                  <option value="sports">Sports & Outdoors</option>
+                  <option value="sports">Automobile</option>
                 </select>
               </div>
               
@@ -350,7 +350,7 @@ const Home = () => {
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Electronics</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Clothing</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Home & Garden</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Sports</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Automobile</a></li>
               </ul>
             </div>
             
@@ -374,7 +374,7 @@ const Home = () => {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 ProductHub. All rights reserved.</p>
+            <p>&copy; 2025 Shopsphere. All rights reserved.</p>
           </div>
         </div>
       </footer>
