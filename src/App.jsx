@@ -16,6 +16,7 @@ import ShippingAddress from "./Components/ShippingAddress";
 import OrderConfirmation from './Components/OrderConfirmation';
 import About from "./Components/About";
 import Seller from './Components/Seller';
+import CustomerOrders from "./Components/CustomerOrders"
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
                 <Route path="shippingaddress" element={<ShippingAddress />} />
                 <Route path="orderconfirmation" element={<OrderConfirmation />}/>
                 <Route path="seller" element={<Seller/>}/>
+                <Route path="CustomerOrders" elements={<CustomerOrders/>}/>
               </Route>
             </Routes>
           </CartProvider>

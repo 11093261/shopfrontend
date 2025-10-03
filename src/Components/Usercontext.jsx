@@ -1,5 +1,4 @@
 import { createContext, useEffect, useState } from "react";
-
 const Usercontext = createContext({
     postAuth: []
 });
@@ -12,9 +11,7 @@ const Userscontext = ({ children }) => {
         if (parts.length === 2) return parts.pop().split(';').shift();
         return null;
     };
-
     useEffect(() => {
-        
         const cookieData = getCookie("post");
         if (cookieData) {
             try {
@@ -49,5 +46,4 @@ const Userscontext = ({ children }) => {
         </Usercontext.Provider>
     );
 };
-
 export { Userscontext, Usercontext };

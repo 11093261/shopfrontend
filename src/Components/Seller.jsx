@@ -55,7 +55,6 @@ const Seller = () => {
   
   useEffect(() => {
     if (selectedSeller && selectedSeller._id) {
-      // Use getCookie instead of localStorage
       const token = getCookie('token');
       
       socketRef.current = io(`${API_BASE_URL}`, {

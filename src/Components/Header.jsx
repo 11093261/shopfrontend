@@ -69,7 +69,7 @@ const Header = () => {
     if (toggle) {
       navigate('/Signup');
     } else {
-      navigate('/Login');
+      navigate('/Register');
     }
   };
 

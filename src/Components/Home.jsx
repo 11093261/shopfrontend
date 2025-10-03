@@ -42,6 +42,21 @@ const Home = () => {
       behavior: "smooth"
     })
   }
+  // Add this to your Home.jsx useEffect
+useEffect(() => {
+  // Test connection
+  const testConnection = async () => {
+    try {
+      const response = await fetch('https://shopspher.com/api/product');
+      console.log('Connection test:', response.status, response.ok);
+      const data = await response.json();
+      console.log('Sample product data:', data[0]);
+    } catch (error) {
+      console.error('Connection test failed:', error);
+    }
+  };
+  testConnection();
+}, []);
   
   const handleCart = async(productData) => {
     addToCart(productData)

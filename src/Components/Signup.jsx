@@ -10,37 +10,81 @@ const Signup = () => {
   const [togglePassword, setTogglePassword] = useState(true);
   const [unsuccess, setUnsuccess] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [getusersAuth, setGetusersAuth] = useState([]);
-  const [postAuth, setPostAuth] = useState([]);
-
-  // useEffect(() => {
-  //   const fetchApi = async () => {
-  //     try { 
-  //       const response = await axios.get(`${API_BASE_URL}/auth/registers`, {
-  //         withCredentials: true
-  //       });
-  //       setGetusersAuth(response.data);
-  //     } catch (error) {
-  //       console.error("Error fetching users:", error.message);
-  //     }
-  //   };
-  //   fetchApi();
-  // }, [API_BASE_URL]);
+  const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   const onSubmit = async (data) => {
     try {
+      setLoading(true);
+      setUnsuccess(null);
+      
+      console.log('Attempting registration...');
+      
       const response = await axios.post(`${API_BASE_URL}/auth/registers`, data, {
-        withCredentials: true
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true // Important for cookies
       });
-      setPostAuth(response.data);
-      setSuccess(response.data);
-      reset();
-      navigate("/Login");
+      
+      console.log('Registration response:', response.data);
+      
+      // Handle different response formats from backend
+      if (response.data.message === "User created successfully" || response.data.userId) {
+        setSuccess(response.data);
+        
+        // Store token if provided in response (for additional security)
+        if (response.data.token) {
+          localStorage.setItem('auth_token', response.data.token);
+        }
+        if (response.data.accessToken) {
+          localStorage.setItem('auth_token', response.data.accessToken);
+        }
+        
+        reset();
+        
+        // Navigate to login after successful registration
+        setTimeout(() => {
+          navigate("/Login", { 
+            replace: true,
+            state: { 
+              message: 'Registration successful! Please log in.',
+              registeredEmail: data.email 
+            }
+          });
+        }, 2000);
+        
+      } else {
+        throw new Error("Unexpected response format");
+      }
+      
     } catch (error) {
-      console.error("Signup error:", error.message);
-      setUnsuccess(error.response?.data?.message || "Signup failed. Please try again.");
+      console.error("Signup error:", error);
+      
+      // Enhanced error handling
+      if (error.response) {
+        // Server responded with error status
+        const { status, data } = error.response;
+        
+        if (status === 409) {
+          setUnsuccess("You already have an account. Please log in instead.");
+        } else if (status === 400) {
+          setUnsuccess(data.message || "Please check your input fields.");
+        } else if (status === 500) {
+          setUnsuccess("Server error. Please try again later.");
+        } else {
+          setUnsuccess(data.message || "Registration failed. Please try again.");
+        }
+      } else if (error.request) {
+        // Network error
+        setUnsuccess("Network error. Please check your connection and try again.");
+      } else {
+        // Other errors
+        setUnsuccess("Registration failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +92,7 @@ const Signup = () => {
     setTogglePassword(prev => !prev);
   };
 
+  // Success screen
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -58,7 +103,8 @@ const Signup = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Signup Successful!</h2>
-          <p className="text-gray-600 mb-6">Welcome to ShopSphere!</p>
+          <p className="text-gray-600 mb-4">Welcome to ShopSphere, {success.name}!</p>
+          <p className="text-sm text-gray-500 mb-6">Redirecting to login page...</p>
           <button 
             onClick={() => navigate("/Login")} 
             className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
@@ -70,6 +116,7 @@ const Signup = () => {
     );
   }
 
+  // Error screen
   if (unsuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -101,8 +148,8 @@ const Signup = () => {
             Sign up to explore thousands of products, exclusive deals, and personalized shopping experiences.
           </p>
           <ul className="space-y-3 gap-5">
-            <li className="flex items-center ">
-              <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http: //www.w3.org/2000/svg">
+            <li className="flex items-center">
+              <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
               </svg>
               <span>Exclusive member discounts</span>
@@ -134,6 +181,7 @@ const Signup = () => {
           </div>
         </div>
       </div>
+      
       <div className="md:w-1/2 flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="p-1 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
@@ -265,9 +313,17 @@ const Signup = () => {
               
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-lg"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity shadow-lg flex items-center justify-center gap-2"
               >
-                Create Account
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </button>
               
               <div className="relative my-6">
