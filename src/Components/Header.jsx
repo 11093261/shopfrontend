@@ -244,7 +244,7 @@ const Header = () => {
                     </NavLink>
                   </li>
                 ))}
-                <li className="border-b border-gray-100">
+                {/* <li className="border-b border-gray-100">
                   <button
                     onClick={() => {
                       handleAdmin();
@@ -254,7 +254,7 @@ const Header = () => {
                   >
                     <FaUser className="mr-2" /> Admin
                   </button>
-                </li>
+                </li> */}
                 <li>
                   <button
                     onClick={() => {
