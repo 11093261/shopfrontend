@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -25,28 +25,18 @@ const Signup = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        withCredentials: true // Important for cookies
+        withCredentials: true // Essential for cookies
       });
       
       console.log('Registration response:', response.data);
       
-      // Handle different response formats from backend
       if (response.data.message === "User created successfully" || response.data.userId) {
         setSuccess(response.data);
-        
-        // Store token if provided in response (for additional security)
-        if (response.data.token) {
-          localStorage.setItem('auth_token', response.data.token);
-        }
-        if (response.data.accessToken) {
-          localStorage.setItem('auth_token', response.data.accessToken);
-        }
-        
         reset();
         
         // Navigate to login after successful registration
         setTimeout(() => {
-          navigate("/Login", { 
+          navigate("/Register", { 
             replace: true,
             state: { 
               message: 'Registration successful! Please log in.',
@@ -54,7 +44,6 @@ const Signup = () => {
             }
           });
         }, 2000);
-        
       } else {
         throw new Error("Unexpected response format");
       }
@@ -62,9 +51,7 @@ const Signup = () => {
     } catch (error) {
       console.error("Signup error:", error);
       
-      // Enhanced error handling
       if (error.response) {
-        // Server responded with error status
         const { status, data } = error.response;
         
         if (status === 409) {
@@ -77,10 +64,8 @@ const Signup = () => {
           setUnsuccess(data.message || "Registration failed. Please try again.");
         }
       } else if (error.request) {
-        // Network error
         setUnsuccess("Network error. Please check your connection and try again.");
       } else {
-        // Other errors
         setUnsuccess("Registration failed. Please try again.");
       }
     } finally {
@@ -348,6 +333,7 @@ const Signup = () => {
                 <button 
                   onClick={() => navigate("/login")} 
                   className="text-indigo-600 font-medium hover:underline"
+                  type="button"
                 >
                   Log in
                 </button>

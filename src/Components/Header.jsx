@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FaShoppingCart, FaUser, FaSearch, FaBars, FaTimes, FaCrown, FaSearchengin } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaSearch, FaBars, FaTimes, FaCrown, FaSearchengin, FaPlus } from 'react-icons/fa';
 import { useContext } from 'react';
 import { CartContext } from './Cartcontext';
 import { fetchProducts, filterProducts } from './HomeApi';
@@ -22,6 +22,7 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false); // New state for mobile cart
   const headerRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch()
@@ -75,6 +76,22 @@ const Header = () => {
 
   const handleAdmin = () => navigate('/Admin');
 
+  // Add this function for Register page navigation
+  const handleRegister = () => {
+    navigate('/Register');
+    setMobileMenuOpen(false);
+  };
+
+  // New function to handle cart click on mobile
+  const handleCartClick = () => {
+    if (window.innerWidth < 768) { // Mobile view
+      setMobileCartOpen(true);
+    } else {
+      // Desktop behavior remains the same (hover)
+      navigate('/cart');
+    }
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -88,6 +105,12 @@ const Header = () => {
     setSearchQuery("");
     dispatch(fetchProducts()); // Reset to show all products
   };
+
+  // Calculate cart totals for mobile view
+  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const shippingFee = cartSubtotal > 0 ? 50 : 0;
+  const tax = cartSubtotal * 0.001;
+  const cartTotal = cartSubtotal + shippingFee + tax;
 
   return (
     <>
@@ -149,13 +172,24 @@ const Header = () => {
                   <FaTimes />
                 </button>
               )}
-              {/* <button type="submit" className="ml-2">
-                <FaSearch className={scrolled ? "text-gray-500" : "text-white"} />
-              </button> */}
             </form>
             
+            {/* List Product Button - Desktop */}
+            <button
+              onClick={handleRegister}
+              className={`hidden md:flex items-center justify-center cursor-pointer w-32 h-10 rounded-full font-medium transition-all duration-300 ${
+                scrolled 
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
+                  : 'bg-green-500 text-white hover:bg-green-600'
+              }`}
+            >
+              <FaPlus className="mr-2" />
+              List Product
+            </button>
+            
+            {/* Cart Icon - Updated for mobile click */}
             <div className="relative cursor-pointer group">
-              <div className="relative">
+              <div className="relative" onClick={handleCartClick}>
                 <FaShoppingCart 
                   className={`text-xl transition-colors duration-300 group-hover:text-amber-500 ${
                     scrolled ? 'text-gray-700' : 'text-white'
@@ -167,7 +201,8 @@ const Header = () => {
                   </span>
                 )}
               </div>
-              <div className="absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+              {/* Desktop hover tooltip */}
+              <div className="hidden md:block absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                 <h3 className="font-bold text-gray-800 mb-2">Your Cart</h3>
                 <p className="text-gray-600 text-sm">{cartCount} items</p>
                 <button 
@@ -178,17 +213,6 @@ const Header = () => {
                 </button>
               </div>
             </div>
-            
-            {/* <button 
-              onClick={handleAdmin}
-              className={`hidden md:flex items-center justify-center cursor-pointer w-24 lg:w-28 h-10 rounded-full font-medium transition-all duration-300 ${
-                scrolled 
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800' 
-                  : 'bg-white bg-opacity-20 text-white hover:bg-blue-300'
-              }`}
-            >
-              <FaUser className="mr-1" /> Admin
-            </button> */}'
             
             <button
               onClick={handleCart}
@@ -215,6 +239,7 @@ const Header = () => {
           </div>
         </div>
         
+        {/* Mobile Menu */}
         <div 
           className={`md:hidden fixed inset-0 bg-black bg-opacity-90 z-40 transition-opacity duration-300 ${
             mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -244,17 +269,18 @@ const Header = () => {
                     </NavLink>
                   </li>
                 ))}
-                {/* <li className="border-b border-gray-100">
+                
+                {/* List Product Button - Mobile */}
+                <li className="border-b border-gray-100">
                   <button
-                    onClick={() => {
-                      handleAdmin();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full text-left py-3 px-6 font-medium text-gray-700 hover:bg-gray-50 flex items-center"
+                    onClick={handleRegister}
+                    className="w-full text-left py-3 px-6 font-medium text-white bg-green-500 hover:bg-green-600 flex items-center"
                   >
-                    <FaUser className="mr-2" /> Admin
+                    <FaPlus className="mr-2" />
+                    List Product
                   </button>
-                </li> */}
+                </li>
+                
                 <li>
                   <button
                     onClick={() => {
@@ -294,6 +320,107 @@ const Header = () => {
             </div>
           </div>
         </div>
+
+        {/* Mobile Cart Overlay */}
+        {mobileCartOpen && (
+          <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50" onClick={() => setMobileCartOpen(false)}>
+            <div 
+              className="absolute top-20 right-0 bottom-0 left-0 bg-white transform transition-transform duration-300 overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800">Your Cart ({cartCount} items)</h2>
+                <button 
+                  onClick={() => setMobileCartOpen(false)}
+                  className="p-2 text-gray-500 hover:text-gray-700"
+                >
+                  <FaTimes size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4">
+                {cart.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FaShoppingCart className="text-gray-400 text-4xl mx-auto mb-4" />
+                    <p className="text-gray-600">Your cart is empty</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Cart Items */}
+                    <div className="space-y-4 mb-6">
+                      {cart.map(item => (
+                        <div key={item._id} className="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                          <div className="flex items-center flex-1">
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.name} 
+                              className="w-16 h-16 object-cover rounded"
+                              onError={(e) => e.target.src = 'https://via.placeholder.com/150?text=No+Image'}
+                            />
+                            <div className="ml-3 flex-1">
+                              <h3 className="font-medium text-sm">{item.sellername}</h3>
+                              <p className="text-gray-600 text-xs line-clamp-1">{item.description}</p>
+                              <p className="text-green-600 font-bold">₦{item.price.toFixed(2)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="bg-gray-100 px-2 py-1 rounded text-sm">Qty: {item.quantity}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Order Summary */}
+                    <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                      <h3 className="font-bold text-lg mb-3">Order Summary</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>Subtotal:</span>
+                          <span>₦{cartSubtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Shipping:</span>
+                          <span>₦{shippingFee.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tax:</span>
+                          <span>₦{tax.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold pt-2 border-t border-gray-300">
+                          <span>Total:</span>
+                          <span>₦{cartTotal.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="space-y-3">
+                      <button 
+                        onClick={() => {
+                          setMobileCartOpen(false);
+                          navigate('/cart');
+                        }}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        View Full Cart
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setMobileCartOpen(false);
+                          navigate('/checkout');
+                        }}
+                        className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                        disabled={cart.length === 0}
+                      >
+                        Checkout Now
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
       <div className="h-20 md:h-16" aria-hidden="true"></div>
     </>

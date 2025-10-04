@@ -5,7 +5,7 @@ import axios from 'axios';
 import { 
   IoLogoFacebook, IoLogoInstagram, IoLogoTwitter, IoLogoWhatsapp,
   IoCart, IoSearch, IoMenu, IoClose, IoStar, IoHeart, IoHeartOutline,
-  IoFilter, IoCloseCircle
+  IoFilter, IoCloseCircle, IoAdd
 } from 'react-icons/io5';
 import { useParams } from 'react-router-dom';
 import { CartContext } from './Cartcontext';
@@ -42,21 +42,38 @@ const Home = () => {
       behavior: "smooth"
     })
   }
-  // Add this to your Home.jsx useEffect
-useEffect(() => {
-  // Test connection
-  const testConnection = async () => {
-    try {
-      const response = await fetch('https://shopspher.com/api/product');
-      console.log('Connection test:', response.status, response.ok);
-      const data = await response.json();
-      console.log('Sample product data:', data[0]);
-    } catch (error) {
-      console.error('Connection test failed:', error);
+
+  // Add authentication check for register navigation
+  const handleRegister = () => {
+    const token = document.cookie.includes('accessToken') || document.cookie.includes('token');
+    if (!token) {
+      navigate('/login', { 
+        state: { 
+          message: 'Please log in to list your products',
+          redirectTo: '/register'
+        }
+      });
+      return;
     }
+    navigate("/Register");
   };
-  testConnection();
-}, []);
+
+  const handleLogin = () => navigate("/Login");
+  
+  // Test connection
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const response = await fetch('https://shopspher.com/api/product');
+        console.log('Connection test:', response.status, response.ok);
+        const data = await response.json();
+        console.log('Sample product data:', data[0]);
+      } catch (error) {
+        console.error('Connection test failed:', error);
+      }
+    };
+    testConnection();
+  }, []);
   
   const handleCart = async(productData) => {
     addToCart(productData)
@@ -66,11 +83,7 @@ useEffect(() => {
     }
   }
   
-  const handleRegister = () => navigate("/Register");
-  const handleLogin = () => navigate("/Login");
-  
   const toggleFavorite = (id) => {
-    // You can implement this functionality if needed
     console.log("Toggle favorite for product:", id);
   };
 
@@ -128,8 +141,6 @@ useEffect(() => {
 
   // Update cart count when cart changes
   useEffect(() => {
-    // This would typically come from your CartContext
-    // For now, we'll set a dummy value
     setCartCount(3); // Example count
   }, []);
 
@@ -146,8 +157,34 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-purple-100">
-      {/* Header */}
-     
+      {/* Header Section - Added */}
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold text-indigo-600">ShopSphere</h1>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={handleRegister}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+              >
+                <IoAdd className="text-lg" />
+                List Product
+              </button>
+              <button 
+                onClick={handleLogin}
+                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
+              >
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Search Results Header */}
       {searchTerm && (
@@ -175,57 +212,66 @@ useEffect(() => {
           </div>
         </div>
       )}
-      
-  
 
-      {/* Products Section */}
-      <section id="products" className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 text-indigo-800">Featured Products</h2>
-            <button 
-              onClick={() => setIsFilterOpen(true)}
-              className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-            >
-              <IoFilter className="mr-1" /> Filters
-            </button>
+      {/* Products Section with 5-Column Mobile Grid */}
+      <section id="products" className="py-8 bg-white">
+        <div className="container mx-auto px-3"> {/* Reduced padding for mobile */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Featured Products</h2>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setIsFilterOpen(true)}
+                className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium transition-colors bg-indigo-50 px-3 py-2 rounded-lg text-sm"
+              >
+                <IoFilter className="mr-1" /> Filters
+              </button>
+              <button 
+                onClick={handleRegister}
+                className="flex items-center bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+              >
+                <IoAdd className="mr-1" /> Sell Yours
+              </button>
+            </div>
           </div>
           
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {/* Enhanced Products Grid with 5 columns on mobile */}
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
-                <div key={product.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
+                <div key={product.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group">
                   <div className="relative overflow-hidden">
                     <img 
                       src={product.imageUrl || "https://via.placeholder.com/300x300?text=Product+Image"} 
                       alt={product.name}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-32 sm:h-36 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <button 
                       onClick={() => toggleFavorite(product.id)}
-                      className="absolute top-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors"
+                      className="absolute top-1 right-1 p-1 bg-white/80 rounded-full hover:bg-white transition-colors backdrop-blur-sm"
                     >
-                      <IoHeartOutline className="text-xl text-gray-600 hover:text-red-500" />
+                      <IoHeartOutline className="text-sm text-gray-600 hover:text-red-500" />
                     </button>
                   </div>
                   
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1">{product.name}</h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+                  <div className="p-2 sm:p-3">
+                    <h3 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1 line-clamp-2 leading-tight">{product.name}</h3>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2 leading-tight">{product.description}</p>
                     
-                    <div className="flex items-center mb-3">
-                      {renderStars(product.rating || 4.5)}
-                      <span className="text-sm text-gray-500 ml-2">({product.reviews || 24})</span>
+                    <div className="flex items-center mb-2">
+                      <div className="flex">
+                        {renderStars(product.rating || 4.5)}
+                      </div>
+                      <span className="text-xs text-gray-500 ml-1">({product.reviews || 24})</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="text-2xl font-bold text-indigo-600">${product.price}</span>
+                      <span className="text-sm sm:text-base font-bold text-indigo-600">${product.price}</span>
                       <button 
                         onClick={() => handleCart(product)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+                        className="px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center text-xs"
                       >
-                        <IoCart className="mr-2" /> Contact seller
+                        <IoCart className="mr-1" /> 
+                        <span className="hidden xs:inline">Contact</span>
                       </button>
                     </div>
                   </div>
@@ -237,13 +283,22 @@ useEffect(() => {
                   <IoSearch className="text-6xl mx-auto" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">No products found</h3>
-                <p className="text-gray-500">Try adjusting your search or filter criteria</p>
-                <button 
-                  onClick={clearFilters}
-                  className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Clear All Filters
-                </button>
+                <p className="text-gray-500 mb-6">Try adjusting your search or filter criteria</p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button 
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                  <button 
+                    onClick={handleRegister}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <IoAdd />
+                    List Your Product
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -297,19 +352,19 @@ useEffect(() => {
                   <option value="electronics">Electronics</option>
                   <option value="clothing">Clothing</option>
                   <option value="home">Home & Garden</option>
-                  <option value="sports">Automobile</option>
+                  <option value="automobile">Automobile</option>
                 </select>
               </div>
               
               {/* Rating Filter */}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Minimum Rating</h4>
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                   {[0, 1, 2, 3, 4, 5].map((rating) => (
                     <button
                       key={rating}
                       onClick={() => setRatingFilter(rating)}
-                      className={`p-2 rounded-lg border ${
+                      className={`px-3 py-2 rounded-lg border text-sm ${
                         ratingFilter === rating 
                           ? 'bg-indigo-600 text-white border-indigo-600' 
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -345,7 +400,7 @@ useEffect(() => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">ProductHub</h3>
+              <h3 className="text-xl font-bold mb-4">ShopSphere</h3>
               <p className="text-gray-400">Connecting buyers and sellers with quality products.</p>
             </div>
             
@@ -389,7 +444,7 @@ useEffect(() => {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Shopsphere. All rights reserved.</p>
+            <p>&copy; 2025 ShopSphere. All rights reserved.</p>
           </div>
         </div>
       </footer>

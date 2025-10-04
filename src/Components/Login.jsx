@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
+import { useAuth } from './context/AuthContext.jsx';
 
 const Login = () => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://shopspher.com';
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
   const [loading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -16,17 +20,21 @@ const Login = () => {
     formState: { errors } 
   } = useForm();
 
-  // Simple connection test - runs only once on component mount
+  // Configure axios defaults
+  useEffect(() => {
+    axios.defaults.withCredentials = true;
+    axios.defaults.timeout = 5000;
+  }, []);
+
+  // Check backend connection
   useEffect(() => {
     const testConnection = async () => {
       try {
-        // Simple HEAD request to check if backend is reachable
-        await axios.head(API_BASE_URL, { timeout: 3000 });
+        await axios.get(`${API_BASE_URL}/alb-health`, { timeout: 2000 });
         setBackendStatus('connected');
       } catch (error) {
-        // If HEAD fails, try OPTIONS as fallback
         try {
-          await axios.options(`${API_BASE_URL}/auth/login`, { timeout: 3000 });
+          await axios.get(`${API_BASE_URL}/health`, { timeout: 2000 });
           setBackendStatus('connected');
         } catch {
           setBackendStatus('disconnected');
@@ -37,75 +45,47 @@ const Login = () => {
     testConnection();
   }, [API_BASE_URL]);
 
-  // Check if user is already logged in - runs only once on component mount
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      const token = localStorage.getItem('auth_token') || 
-                   document.cookie.match(/(?:^|; )token=([^;]*)/)?.[1] ||
-                   document.cookie.match(/(?:^|; )accessToken=([^;]*)/)?.[1];
-
-      if (!token || token.length < 10) {
-        return; // No valid token found
-      }
-
-      try {
-        const response = await axios.get(`${API_BASE_URL}/auth/testauth`, {
-          withCredentials: true,
-          timeout: 5000
-        });
-        
-        if (response.status === 200) {
-          navigate("/Register", { replace: true });
-        }
-      } catch (error) {
-        // Clear invalid tokens
-        localStorage.removeItem('auth_token');
-        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      }
-    };
-    
-    checkAuthStatus();
-  }, [navigate, API_BASE_URL]);
-
   const onSubmit = async (data) => {
     try {
       setIsLoading(true);
       setError('');
       
-      console.log('Attempting login with:', data.email);
-      
       const response = await axios.post(
         `${API_BASE_URL}/auth/login`,
         data, 
         { 
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+          },
           withCredentials: true,
-          timeout: 10000 
+          timeout: 5000
         }
       );
       
-      console.log('Login response:', response.data);
-      
-      if (response.data.userId && response.data.accessToken) {
-        // Store token in localStorage for quick access
-        localStorage.setItem('auth_token', response.data.accessToken);
-        localStorage.setItem('user_id', response.data.userId);
-        localStorage.setItem('user_name', response.data.name);
+      // Handle successful login
+      if (response.data.userId || response.data.user) {
+        console.log('Login successful, redirecting to Register page...');
         
-        console.log('Login successful, navigating to Register page...');
+        // Extract user data - tokens are now in httpOnly cookies
+        const userData = response.data.user || {
+          name: response.data.name,
+          email: data.email,
+          userId: response.data.userId
+        };
         
-        // Navigate immediately without delay
-        navigate("/Register", { 
+        // Update auth context with user data only - no token
+        login(userData);
+        
+        // Navigate to Register page after successful login
+        navigate("/", { 
           replace: true,
           state: { 
-            message: 'Login successful!',
-            userName: response.data.name 
+            message: 'Login successful! Redirecting to product listing...',
+            userName: userData.name || 'User'
           }
         });
-        
       } else {
-        throw new Error("Invalid response format");
+        throw new Error("Unexpected response format");
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -124,7 +104,7 @@ const Login = () => {
             setError(data.message || "Invalid email or password");
             break;
           case 404:
-            setError("Login endpoint not found. Please check the API URL.");
+            setError("Service unavailable. Please try again later.");
             break;
           case 500:
             setError("Server error. Please try again later.");
@@ -138,16 +118,6 @@ const Login = () => {
     }
   };
 
-  const handleTestConnection = async () => {
-    setBackendStatus('checking');
-    try {
-      await axios.head(API_BASE_URL, { timeout: 3000 });
-      setBackendStatus('connected');
-    } catch (error) {
-      setBackendStatus('disconnected');
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -156,28 +126,24 @@ const Login = () => {
         <div className="p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800">Sign in to your account</h2>
-            <p className="text-gray-600 mt-2">Welcome back to ShopSpher</p>
+            <p className="text-gray-600 mt-2">Welcome back to ShopSphere</p>
+            
+            {/* Connection Status */}
             <div className="flex items-center justify-center gap-3 mt-3">
               <div className="flex items-center gap-2">
-                <span className={`inline-block w-3 h-3 rounded-full ${
-                  backendStatus === 'connected' ? 'bg-green-500' : 
-                  backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-gray-500'
-                }`}></span>
+                <span 
+                  className={`inline-block w-3 h-3 rounded-full ${
+                    backendStatus === 'connected' ? 'bg-green-500' : 
+                    backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
+                  }`}
+                ></span>
                 <p className="text-sm text-gray-500">
                   {backendStatus === 'connected' && 'Backend connected'}
                   {backendStatus === 'disconnected' && 'Backend disconnected'}
                   {backendStatus === 'checking' && 'Checking connection...'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleTestConnection}
-                className="text-xs text-indigo-600 hover:text-indigo-500 underline"
-              >
-                Test
-              </button>
             </div>
-            <p className="text-xs text-gray-400 mt-1">API: {API_BASE_URL}</p>
           </div>
           
           {error && (
@@ -203,8 +169,10 @@ const Login = () => {
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className={`appearance-none relative block w-full px-4 py-3 rounded-lg border ${errors.email ? "border-red-500" : "border-gray-300"} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10`}
-                  placeholder="Email address"
+                  className={`appearance-none relative block w-full px-4 py-3 rounded-lg border ${
+                    errors.email ? "border-red-500" : "border-gray-300"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10`}
+                  placeholder="Enter your email address"
                   {...register("email", {
                     required: "Email is required",
                     pattern: {
@@ -217,6 +185,7 @@ const Login = () => {
                   <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
                 )}
               </div>
+              
               <div>
                 <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
                   Password
@@ -225,8 +194,10 @@ const Login = () => {
                   id="password"
                   type="password"
                   autoComplete="current-password"
-                  className={`appearance-none relative block w-full px-4 py-3 rounded-lg border ${errors.password ? "border-red-500" : "border-gray-300"} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10`}
-                  placeholder="Password"
+                  className={`appearance-none relative block w-full px-4 py-3 rounded-lg border ${
+                    errors.password ? "border-red-500" : "border-gray-300"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10`}
+                  placeholder="Enter your password"
                   {...register("password", {
                     required: "Password is required",
                     minLength: {
@@ -238,26 +209,6 @@ const Login = () => {
                 {errors.password && (
                   <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
                 )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
-                  Forgot your password?
-                </a>
               </div>
             </div>
 
@@ -287,7 +238,7 @@ const Login = () => {
               Don't have an account?{' '}
               <button 
                 type="button"
-                onClick={() => navigate("/Signup")}
+                onClick={() => navigate("/signup")}
                 className="font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Register now

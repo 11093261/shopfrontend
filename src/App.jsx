@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Body from './Body';
 import Home from './Components/Home';
 import Contact from './Components/Contact';
@@ -16,37 +17,116 @@ import ShippingAddress from "./Components/ShippingAddress";
 import OrderConfirmation from './Components/OrderConfirmation';
 import About from "./Components/About";
 import Seller from './Components/Seller';
-import CustomerOrders from "./Components/CustomerOrders"
+import CustomerOrders from "./Components/CustomerOrders";
+import { AuthProvider, useAuth } from './Components/context/AuthContext.jsx';
+import { AuthDebugger } from './Components/AuthDebugger.jsx';
 
-function App() {
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading authentication...</div>;
+  }
+  
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+// Public Route Component (redirect to home if already authenticated)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading authentication...</div>;
+  }
+  
+  return !isAuthenticated ? children : <Navigate to="/" replace />;
+};
+
+// Main app content with routing
+const AppContent = () => {
   return (
     <Router>
-      <main>
-        <Userscontext>
-          <CartProvider>
-            <Routes>
-              <Route  element={<Body/>}>
-                <Route path='/' index element={<Home/>} />
-                <Route path="about" element={<About/>}/>
-                <Route path='contact' element={<Contact/>}/>
-                <Route path='cart' element={<Cart/>}/>
-                <Route path='register' element={<Register/>}/>
-                <Route path='payment' element={<Payment/>}/>
-                <Route path='signup' element={<Signup/>}/>
-                <Route path='login' element={<Login/>}/>
-                <Route path='admin' element={<Admin/>}/>
-                <Route path='adminlogin' element={<AdminLogin/>}/>
-                <Route path='order' element={<Order/>}/>
-                <Route path="shippingaddress" element={<ShippingAddress />} />
-                <Route path="orderconfirmation" element={<OrderConfirmation />}/>
-                <Route path="seller" element={<Seller/>}/>
-                <Route path="CustomerOrders" elements={<CustomerOrders/>}/>
-              </Route>
-            </Routes>
-          </CartProvider>
-        </Userscontext>
-      </main>
+      <Userscontext>
+        <CartProvider>
+          <Routes>
+            {/* Body wrapper for common layout - applies to all routes */}
+            <Route path="/" element={<Body />}>
+              {/* Public routes */}
+              <Route index element={<Home />} />
+              <Route path="about" element={<About />} />
+              <Route path="contact" element={<Contact />} />
+              <Route path="cart" element={<Cart />} />
+              
+              {/* Authentication routes - only accessible when logged out */}
+              <Route path="login" element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } />
+              <Route path="signup" element={
+                <PublicRoute>
+                  <Signup />
+                </PublicRoute>
+              } />
+              
+              {/* Protected routes - only accessible when logged in */}
+              <Route path="register" element={
+                <ProtectedRoute>
+                  <Register />
+                </ProtectedRoute>
+              } />
+              <Route path="payment" element={
+                <ProtectedRoute>
+                  <Payment />
+                </ProtectedRoute>
+              } />
+              <Route path="order" element={
+                <ProtectedRoute>
+                  <Order />
+                </ProtectedRoute>
+              } />
+              <Route path="shippingaddress" element={
+                <ProtectedRoute>
+                  <ShippingAddress />
+                </ProtectedRoute>
+              } />
+              <Route path="orderconfirmation" element={
+                <ProtectedRoute>
+                  <OrderConfirmation />
+                </ProtectedRoute>
+              } />
+              <Route path="seller" element={
+                <ProtectedRoute>
+                  <Seller />
+                </ProtectedRoute>
+              } />
+              <Route path="customerorders" element={
+                <ProtectedRoute>
+                  <CustomerOrders />
+                </ProtectedRoute>
+              } />
+              
+              {/* Admin routes */}
+              <Route path="admin" element={<Admin />} />
+              <Route path="adminlogin" element={<AdminLogin />} />
+            </Route>
+          </Routes>
+          
+          {/* Auth debugger - only in development */}
+          {process.env.NODE_ENV === 'development' && <AuthDebugger />}
+        </CartProvider>
+      </Userscontext>
     </Router>
+  );
+};
+
+// Root app component
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
