@@ -175,7 +175,7 @@ const Header = () => {
             </form>
             
             {/* List Product Button - Desktop */}
-            <button
+            {/* <button
               onClick={handleRegister}
               className={`hidden md:flex items-center justify-center cursor-pointer w-32 h-10 rounded-full font-medium transition-all duration-300 ${
                 scrolled 
@@ -185,7 +185,7 @@ const Header = () => {
             >
               <FaPlus className="mr-2" />
               List Product
-            </button>
+            </button> */}
             
             {/* Cart Icon - Updated for mobile click */}
             <div className="relative cursor-pointer group">

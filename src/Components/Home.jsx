@@ -35,30 +35,57 @@ const Home = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(0);
   
-  const handleProducts = () => {
-    navigate("/Register")
-    window.scrollBy({
-      top: -1000,
-      behavior: "smooth"
-    })
-  }
-
-  // Add authentication check for register navigation
+  // Enhanced authentication check for register navigation
   const handleRegister = () => {
-    const token = document.cookie.includes('accessToken') || document.cookie.includes('token');
-    if (!token) {
-      navigate('/login', { 
+    // Check if user has signed up before by verifying token existence
+    const hasSignedUp = document.cookie.includes('accessToken') || document.cookie.includes('token');
+    
+    if (!hasSignedUp) {
+      // User hasn't signed up - redirect to signup page
+      navigate('/signup', { 
         state: { 
-          message: 'Please log in to list your products',
+          message: 'Please create an account to list your products',
           redirectTo: '/register'
         }
       });
-      return;
+    } else {
+      // Check if user is currently logged in
+      const isLoggedIn = document.cookie.includes('accessToken') || document.cookie.includes('token');
+      
+      if (!isLoggedIn) {
+        // User has signed up but not logged in - redirect to login
+        navigate('/login', { 
+          state: { 
+            message: 'Please login to list your products',
+            redirectTo: '/register'
+          }
+        });
+      } else {
+        // User is logged in - go directly to register page
+        navigate('/register');
+      }
     }
-    navigate("/Register");
   };
 
   const handleLogin = () => navigate("/Login");
+  
+  // Handle contact seller - navigate to seller page
+  const handleContactSeller = (productData) => {
+    if (productData) {
+      dispatch(setSelectedSeller(productData));
+      navigate("/seller");
+    }
+  };
+
+  // Handle add to cart functionality
+  const handleAddToCart = (productData) => {
+    addToCart(productData);
+    // Update cart count
+    setCartCount(prev => prev + 1);
+    
+    // Optional: Show success notification
+    console.log('Product added to cart:', productData.name);
+  };
   
   // Test connection
   useEffect(() => {
@@ -74,14 +101,6 @@ const Home = () => {
     };
     testConnection();
   }, []);
-  
-  const handleCart = async(productData) => {
-    addToCart(productData)
-    if(productData){
-      dispatch(setSelectedSeller(productData))
-      navigate("/Seller")
-    }
-  }
   
   const toggleFavorite = (id) => {
     console.log("Toggle favorite for product:", id);
@@ -162,9 +181,7 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-indigo-600">ShopSphere</h1>
-            </div>
+            
 
             {/* Navigation Buttons */}
             <div className="flex items-center space-x-4">
@@ -175,12 +192,12 @@ const Home = () => {
                 <IoAdd className="text-lg" />
                 List Product
               </button>
-              <button 
+              {/* <button 
                 onClick={handleLogin}
                 className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
               >
                 Login
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -215,7 +232,7 @@ const Home = () => {
 
       {/* Products Section with 5-Column Mobile Grid */}
       <section id="products" className="py-8 bg-white">
-        <div className="container mx-auto px-3"> {/* Reduced padding for mobile */}
+        <div className="container mx-auto px-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Featured Products</h2>
             <div className="flex gap-2">
@@ -234,7 +251,7 @@ const Home = () => {
             </div>
           </div>
           
-          {/* Enhanced Products Grid with 5 columns on mobile */}
+          {/* Enhanced Products Grid with Dual Buttons */}
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
@@ -264,14 +281,24 @@ const Home = () => {
                       <span className="text-xs text-gray-500 ml-1">({product.reviews || 24})</span>
                     </div>
                     
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm sm:text-base font-bold text-indigo-600">${product.price}</span>
+                    {/* Dual Buttons - Contact Seller & Add to Cart */}
+                    <div className="flex justify-between items-center mt-2 gap-1">
+                      {/* Contact Seller Button */}
                       <button 
-                        onClick={() => handleCart(product)}
-                        className="px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center text-xs"
+                        onClick={() => handleContactSeller(product)}
+                        className="flex-1 px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center justify-center text-xs"
                       >
                         <IoCart className="mr-1" /> 
-                        <span className="hidden xs:inline">Contact</span>
+                        <span>Contact Seller</span>
+                      </button>
+                      
+                      {/* Add to Cart Button */}
+                      <button 
+                        onClick={() => handleAddToCart(product)}
+                        className="flex-1 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center justify-center text-xs"
+                      >
+                        <IoCart className="mr-1" /> 
+                        <span>Add to Cart</span>
                       </button>
                     </div>
                   </div>
