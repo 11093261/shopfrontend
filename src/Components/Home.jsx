@@ -21,7 +21,7 @@ const Home = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { id } = useParams(); 
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState([]);
   const [error, setError] = useState(null);
   const navigate = useNavigate()
   
@@ -94,6 +94,7 @@ const Home = () => {
         const response = await fetch('https://shopspher.com/api/product');
         console.log('Connection test:', response.status, response.ok);
         const data = await response.json();
+        setProduct(data)
         console.log('Sample product data:', data[0]);
       } catch (error) {
         console.error('Connection test failed:', error);
@@ -273,7 +274,7 @@ const Home = () => {
                   <div className="p-2 sm:p-3">
                     <h3 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1 line-clamp-2 leading-tight">{product.name}</h3>
                     <p className="text-gray-600 text-xs mb-2 line-clamp-2 leading-tight">{product.description}</p>
-                    
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2 leading-tight">{product.price}</p>
                     <div className="flex items-center mb-2">
                       <div className="flex">
                         {renderStars(product.rating || 4.5)}
