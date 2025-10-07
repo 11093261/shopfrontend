@@ -1,75 +1,34 @@
-// Home.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { 
-  IoLogoFacebook, IoLogoInstagram, IoLogoTwitter, IoLogoWhatsapp,
-  IoCart, IoSearch, IoMenu, IoClose, IoStar, IoHeart, IoHeartOutline,
-  IoFilter, IoCloseCircle, IoAdd
-} from 'react-icons/io5';
-import { useParams } from 'react-router-dom';
+import { IoCart, IoSearch, IoFilter, IoCloseCircle, IoAdd, IoStar, IoHeartOutline } from 'react-icons/io5';
 import { CartContext } from './Cartcontext';
+import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, setSelectedSeller, filterProducts, setSearchTerm } from '../Components/HomeApi';
-import { useDispatch } from 'react-redux';
-import { useSelector } from "react-redux"
+import { useAuth } from './context/AuthContext';
 
 const Home = () => {
-  const dispatch = useDispatch()
-  const { addToCart } = useContext(CartContext)
-  const [cartCount, setCartCount] = useState(0);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const dispatch = useDispatch();
+  const { addToCart } = useContext(CartContext);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const { id } = useParams(); 
-  const [product, setProduct] = useState([]);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate()
-  
-  const listitems = useSelector((state) => state.home.data)
-  const filteredProducts = useSelector((state) => state.home.filteredData || state.home.data)
-  const searchTerm = useSelector((state) => state.home.searchTerm || "")
-  const loading = useSelector((state) => state.home.loading)
-  
-  // Filter states
   const [priceRange, setPriceRange] = useState([0, 100000]);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(0);
   
-  // Enhanced authentication check for register navigation
+  const filteredProducts = useSelector((state) => state.home.filteredData || state.home.data);
+  const searchTerm = useSelector((state) => state.home.searchTerm || "");
+  const loading = useSelector((state) => state.home.loading);
+
   const handleRegister = () => {
-    // Check if user has signed up before by verifying token existence
-    const hasSignedUp = document.cookie.includes('accessToken') || document.cookie.includes('token');
-    
-    if (!hasSignedUp) {
-      // User hasn't signed up - redirect to signup page
-      navigate('/signup', { 
-        state: { 
-          message: 'Please create an account to list your products',
-          redirectTo: '/register'
-        }
-      });
+    if (isAuthenticated) {
+      navigate('/register');
     } else {
-      // Check if user is currently logged in
-      const isLoggedIn = document.cookie.includes('accessToken') || document.cookie.includes('token');
-      
-      if (!isLoggedIn) {
-        // User has signed up but not logged in - redirect to login
-        navigate('/login', { 
-          state: { 
-            message: 'Please login to list your products',
-            redirectTo: '/register'
-          }
-        });
-      } else {
-        // User is logged in - go directly to register page
-        navigate('/register');
-      }
+      navigate('/login');
     }
   };
 
-  const handleLogin = () => navigate("/Login");
-  
-  // Handle contact seller - navigate to seller page
   const handleContactSeller = (productData) => {
     if (productData) {
       dispatch(setSelectedSeller(productData));
@@ -77,36 +36,11 @@ const Home = () => {
     }
   };
 
-  // Handle add to cart functionality
   const handleAddToCart = (productData) => {
     addToCart(productData);
-    // Update cart count
-    setCartCount(prev => prev + 1);
-    
-    // Optional: Show success notification
     console.log('Product added to cart:', productData.name);
   };
   
-  // Test connection
-  useEffect(() => {
-    const testConnection = async () => {
-      try {
-        const response = await fetch('https://shopspher.com/api/product');
-        console.log('Connection test:', response.status, response.ok);
-        const data = await response.json();
-        setProduct(data)
-        console.log('Sample product data:', data[0]);
-      } catch (error) {
-        console.error('Connection test failed:', error);
-      }
-    };
-    testConnection();
-  }, []);
-  
-  const toggleFavorite = (id) => {
-    console.log("Toggle favorite for product:", id);
-  };
-
   const renderStars = (rating) => {
     return Array(5).fill(0).map((_, i) => (
       <IoStar key={i} className={i < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"} />
@@ -143,26 +77,8 @@ const Home = () => {
   };
   
   useEffect(() => {
-    const getproducts = async() => {
-      try {
-        dispatch(fetchProducts())
-      } catch (err) {
-        if(err.response) {
-          console.log(err.response.data)
-          console.log(err.response.status)
-          console.log(err.response.headers)
-        } else {
-          console.log(`Error:${err.message}`)
-        }
-      }
-    }
-    getproducts()
-  }, [dispatch])
-
-  // Update cart count when cart changes
-  useEffect(() => {
-    setCartCount(3); // Example count
-  }, []);
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   if (loading) {
     return (
@@ -177,14 +93,10 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-purple-100">
-      {/* Header Section - Added */}
+      {/* Header Section */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            
-
-            {/* Navigation Buttons */}
             <div className="flex items-center space-x-4">
               <button 
                 onClick={handleRegister}
@@ -193,12 +105,6 @@ const Home = () => {
                 <IoAdd className="text-lg" />
                 List Product
               </button>
-              {/* <button 
-                onClick={handleLogin}
-                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
-              >
-                Login
-              </button> */}
             </div>
           </div>
         </div>
@@ -207,7 +113,7 @@ const Home = () => {
       {/* Search Results Header */}
       {searchTerm && (
         <div className="container mx-auto px-4 pt-6">
-          <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100 animate-fadeIn">
+          <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
@@ -231,7 +137,7 @@ const Home = () => {
         </div>
       )}
 
-      {/* Products Section with 5-Column Mobile Grid */}
+      {/* Products Section */}
       <section id="products" className="py-8 bg-white">
         <div className="container mx-auto px-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
@@ -252,7 +158,7 @@ const Home = () => {
             </div>
           </div>
           
-          {/* Enhanced Products Grid with Dual Buttons */}
+          {/* Products Grid */}
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
@@ -263,10 +169,7 @@ const Home = () => {
                       alt={product.name}
                       className="w-full h-32 sm:h-36 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <button 
-                      onClick={() => toggleFavorite(product.id)}
-                      className="absolute top-1 right-1 p-1 bg-white/80 rounded-full hover:bg-white transition-colors backdrop-blur-sm"
-                    >
+                    <button className="absolute top-1 right-1 p-1 bg-white/80 rounded-full hover:bg-white transition-colors backdrop-blur-sm">
                       <IoHeartOutline className="text-sm text-gray-600 hover:text-red-500" />
                     </button>
                   </div>
@@ -282,9 +185,8 @@ const Home = () => {
                       <span className="text-xs text-gray-500 ml-1">({product.reviews || 24})</span>
                     </div>
                     
-                    {/* Dual Buttons - Contact Seller & Add to Cart */}
+                    {/* Dual Buttons */}
                     <div className="flex justify-between items-center mt-2 gap-1">
-                      {/* Contact Seller Button */}
                       <button 
                         onClick={() => handleContactSeller(product)}
                         className="flex-1 px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center justify-center text-xs"
@@ -293,7 +195,6 @@ const Home = () => {
                         <span>Contact Seller</span>
                       </button>
                       
-                      {/* Add to Cart Button */}
                       <button 
                         onClick={() => handleAddToCart(product)}
                         className="flex-1 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center justify-center text-xs"
@@ -337,7 +238,7 @@ const Home = () => {
       {isFilterOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsFilterOpen(false)}></div>
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto my-8 p-6 animate-slideUp">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto my-8 p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">Filters</h3>
               <button 
@@ -422,60 +323,6 @@ const Home = () => {
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-xl font-bold mb-4">ShopSphere</h3>
-              <p className="text-gray-400">Connecting buyers and sellers with quality products.</p>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Categories</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Electronics</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Clothing</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Home & Garden</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Automobile</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Connect With Us</h4>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <IoLogoFacebook className="text-2xl" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <IoLogoInstagram className="text-2xl" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <IoLogoTwitter className="text-2xl" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <IoLogoWhatsapp className="text-2xl" />
-                </a>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 ShopSphere. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

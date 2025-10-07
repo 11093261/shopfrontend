@@ -5,117 +5,129 @@ import axios from 'axios';
 import { useAuth } from './context/AuthContext.jsx';
 
 const Login = () => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://shopspher.com';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   
-  const [loading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const { 
     register, 
     handleSubmit, 
-    formState: { errors } 
+    formState: { errors },
+    reset
   } = useForm();
 
   // Configure axios defaults
   useEffect(() => {
     axios.defaults.withCredentials = true;
-    axios.defaults.timeout = 5000;
+    axios.defaults.timeout = 10000;
   }, []);
 
-  // Check backend connection
+  // Test backend connection on component mount
   useEffect(() => {
     const testConnection = async () => {
       try {
-        await axios.get(`${API_BASE_URL}/alb-health`, { timeout: 2000 });
-        setBackendStatus('connected');
-      } catch (error) {
-        try {
-          await axios.get(`${API_BASE_URL}/health`, { timeout: 2000 });
-          setBackendStatus('connected');
-        } catch {
-          setBackendStatus('disconnected');
+        // Try multiple health endpoints
+        const endpoints = ['/alb-health', '/health', '/healthz', '/simple-health'];
+        
+        for (const endpoint of endpoints) {
+          try {
+            await axios.get(`${API_BASE_URL}${endpoint}`, { timeout: 3000 });
+            setBackendStatus('connected');
+            console.log(`✅ Backend connected via ${endpoint}`);
+            return;
+          } catch (endpointError) {
+            continue;
+          }
         }
+        
+        // If all endpoints fail
+        setBackendStatus('disconnected');
+        console.warn('❌ All backend health checks failed');
+      } catch (error) {
+        setBackendStatus('disconnected');
+        console.error('❌ Connection test failed:', error.message);
       }
     };
 
     testConnection();
   }, [API_BASE_URL]);
 
-  const onSubmit = async (data) => {
-    try {
-      setIsLoading(true);
-      setError('');
+  // Redirect if already authenticated - FIXED: Check both authentication states
+  useEffect(() => {
+    console.log('🔄 Login component auth check:', { isAuthenticated, user });
+    
+    if (isAuthenticated && user && user.userId) {
+      console.log('✅ User already authenticated, redirecting to Register...');
       
-      const response = await axios.post(
-        `${API_BASE_URL}/auth/login`,
-        data, 
-        { 
-          headers: { 
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-          timeout: 5000
-        }
-      );
-      
-      // Handle successful login
-      if (response.data.userId || response.data.user) {
-        console.log('Login successful, redirecting to Register page...');
-        
-        // Extract user data - tokens are now in httpOnly cookies
-        const userData = response.data.user || {
-          name: response.data.name,
-          email: data.email,
-          userId: response.data.userId
-        };
-        
-        // Update auth context with user data only - no token
-        login(userData);
-        
-        // Navigate to Register page after successful login
-        navigate("/", { 
+      // Use setTimeout to ensure the navigation happens after render
+      const redirectTimer = setTimeout(() => {
+        navigate("/Register", { 
           replace: true,
           state: { 
-            message: 'Login successful! Redirecting to product listing...',
-            userName: userData.name || 'User'
+            message: 'Welcome back!',
+            userName: user.name
           }
         });
+      }, 100);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  const onSubmit = async (formData) => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      console.log('🔐 Starting login process for:', formData.email);
+
+      // Use the AuthContext login method which handles the API call
+      const result = await login(formData);
+      
+      if (result.success) {
+        console.log('✅ Login successful via AuthContext, user:', result.user);
+        
+        // Add a small delay to ensure auth state is updated
+        setTimeout(() => {
+          navigate("/Register", { 
+            replace: true,
+            state: { 
+              message: 'Login successful!',
+              userName: result.user.name
+            }
+          });
+        }, 200);
       } else {
-        throw new Error("Unexpected response format");
+        // AuthContext already set the error, but we need to display it here too
+        throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login component error:', error);
       
+      // Handle specific error cases
       if (error.code === 'ECONNABORTED') {
         setError("Request timed out. Please try again.");
       } else if (!error.response) {
-        setError("Network error. Please check your connection.");
+        setError("Network error. Please check your connection and ensure the backend is running.");
       } else {
-        const { status, data } = error.response;
-        switch (status) {
-          case 400:
-            setError(data.message || "Invalid request format");
-            break;
-          case 401:
-            setError(data.message || "Invalid email or password");
-            break;
-          case 404:
-            setError("Service unavailable. Please try again later.");
-            break;
-          case 500:
-            setError("Server error. Please try again later.");
-            break;
-          default:
-            setError(data.message || "Login failed. Please try again.");
-        }
+        // Use the error message from the caught error
+        setError(error.message || "Login failed. Please try again.");
       }
+      
+      // Clear form on error
+      reset();
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  };
+
+  const handleSignupRedirect = () => {
+    navigate("/signup");
   };
 
   return (
@@ -133,29 +145,30 @@ const Login = () => {
               <div className="flex items-center gap-2">
                 <span 
                   className={`inline-block w-3 h-3 rounded-full ${
-                    backendStatus === 'connected' ? 'bg-green-500' : 
-                    backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
+                    backendStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+                    backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
                   }`}
                 ></span>
                 <p className="text-sm text-gray-500">
-                  {backendStatus === 'connected' && 'Backend connected'}
-                  {backendStatus === 'disconnected' && 'Backend disconnected'}
-                  {backendStatus === 'checking' && 'Checking connection...'}
+                  {backendStatus === 'connected' && 'Backend connected ✅'}
+                  {backendStatus === 'disconnected' && 'Backend disconnected ❌'}
+                  {backendStatus === 'checking' && 'Checking connection... 🔄'}
                 </p>
               </div>
             </div>
           </div>
           
           {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-md text-center mb-4">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md text-center mb-4">
+              <div className="font-medium">Login Failed</div>
+              <div className="text-sm mt-1">{error}</div>
             </div>
           )}
 
           {backendStatus === 'disconnected' && (
-            <div className="bg-yellow-50 text-yellow-700 p-3 rounded-md text-center mb-4">
-              <p className="text-sm">Backend server appears to be offline.</p>
-              <p className="text-xs mt-1">Please check if the server is running.</p>
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-3 rounded-md text-center mb-4">
+              <p className="text-sm font-medium">Backend connection issue</p>
+              <p className="text-xs mt-1">Please ensure the server is running at {API_BASE_URL}</p>
             </div>
           )}
           
@@ -170,14 +183,14 @@ const Login = () => {
                   type="email"
                   autoComplete="email"
                   className={`appearance-none relative block w-full px-4 py-3 rounded-lg border ${
-                    errors.email ? "border-red-500" : "border-gray-300"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10`}
+                    errors.email ? "border-red-500 bg-red-50" : "border-gray-300"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
                   placeholder="Enter your email address"
                   {...register("email", {
                     required: "Email is required",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Invalid email address"
+                      message: "Invalid email address format"
                     }
                   })}
                 />
@@ -195,8 +208,8 @@ const Login = () => {
                   type="password"
                   autoComplete="current-password"
                   className={`appearance-none relative block w-full px-4 py-3 rounded-lg border ${
-                    errors.password ? "border-red-500" : "border-gray-300"
-                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10`}
+                    errors.password ? "border-red-500 bg-red-50" : "border-gray-300"
+                  } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors`}
                   placeholder="Enter your password"
                   {...register("password", {
                     required: "Password is required",
@@ -216,7 +229,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading || backendStatus === 'disconnected'}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-opacity"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {loading ? (
                   <>
@@ -238,8 +251,8 @@ const Login = () => {
               Don't have an account?{' '}
               <button 
                 type="button"
-                onClick={() => navigate("/signup")}
-                className="font-medium text-indigo-600 hover:text-indigo-500"
+                onClick={handleSignupRedirect}
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
               >
                 Register now
               </button>

@@ -66,7 +66,7 @@ const AppContent = () => {
               } />
               <Route path="signup" element={
                 <PublicRoute>
-                  <Signup />
+                  <Signup/>
                 </PublicRoute>
               } />
               
