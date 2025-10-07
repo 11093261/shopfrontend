@@ -52,7 +52,8 @@ const Register = () => {
 
   const checkPostLimit = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/user/post-status`, {
+      // FIXED: Changed to match backend endpoint /api/payment/posts/status
+      const response = await axios.get(`${API_BASE_URL}/api/posts/status`, {
         withCredentials: true,
         timeout: 5000
       });
@@ -60,9 +61,9 @@ const Register = () => {
       console.log('✅ Post limit check:', response.data);
       
       setPostStatus({
-        usedPosts: response.data.usedPosts || 0,
-        remainingPosts: response.data.remainingPosts || FREE_POST_LIMIT,
-        totalPosts: response.data.totalPosts || FREE_POST_LIMIT,
+        usedPosts: response.data.postsCount || 0,
+        remainingPosts: response.data.remainingFreePosts || FREE_POST_LIMIT,
+        totalPosts: FREE_POST_LIMIT,
         needsPayment: response.data.needsPayment || false
       });
     } catch (error) {
@@ -130,36 +131,64 @@ const Register = () => {
     }
   };
 
+  // FIXED: Updated to match backend endpoint /api/payment/initialize
   const handlePayment = async (paymentMethod = 'card') => {
     setPaymentProcessing(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/payment/create`, {
-        amount: 500,
-        currency: 'NGN',
-        paymentMethod,
-        product: 'premium_posts'
-      }, {
+      // FIXED: Changed endpoint to /api/payment/initialize (matches backend)
+      const response = await axios.post(`${API_BASE_URL}/api/payment/initialize`, {}, {
         withCredentials: true
       });
 
-      if (response.data.paymentUrl) {
-        window.location.href = response.data.paymentUrl;
-      } else if (response.data.success) {
-        setPostStatus(prev => ({
-          ...prev,
-          remainingPosts: prev.remainingPosts + 10,
-          needsPayment: false
-        }));
-        setShowPaymentModal(false);
-        setUploadError('Payment successful! You can now post your product.');
+      if (response.data.authorization_url) {
+        // Redirect to Paystack payment page
+        window.location.href = response.data.authorization_url;
+      } else {
+        throw new Error('No payment URL received');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      setUploadError('Payment failed. Please try again.');
+      if (error.response && error.response.data && error.response.data.error) {
+        setUploadError(`Payment failed: ${error.response.data.error}`);
+      } else {
+        setUploadError('Payment initialization failed. Please try again.');
+      }
     } finally {
       setPaymentProcessing(false);
     }
   };
+
+  // FIXED: Added payment verification function
+  const verifyPayment = async (reference) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/payment/verify/${reference}`, {
+        withCredentials: true
+      });
+      
+      if (response.data.success) {
+        setUploadError('Payment successful! You can now post more products.');
+        setShowPaymentModal(false);
+        // Refresh post status
+        await checkPostLimit();
+      } else {
+        setUploadError(`Payment verification failed: ${response.data.error}`);
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      setUploadError('Payment verification failed. Please check your payment status.');
+    }
+  };
+
+  // FIXED: Check for payment verification on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentReference = urlParams.get('reference');
+    const fromPayment = urlParams.get('fromPayment');
+    
+    if (paymentReference && fromPayment) {
+      verifyPayment(paymentReference);
+    }
+  }, []);
 
   const onSubmit = async (data) => {
     if (!isAuthenticated) {
@@ -275,9 +304,10 @@ const Register = () => {
                 <p className="text-lg font-semibold mb-2">Get 10 Additional Posts</p>
                 <div className="flex items-center justify-center gap-2">
                   <FaDollarSign className="text-xl" />
-                  <span className="text-3xl font-bold">500</span>
+                  <span className="text-3xl font-bold">10</span>
                   <span className="text-lg">NGN</span>
                 </div>
+                <p className="text-sm opacity-90 mt-1">≈ $0.01 USD</p>
               </div>
             </div>
 
@@ -307,6 +337,24 @@ const Register = () => {
                 Cancel
               </button>
             </div>
+
+            {/* Payment status message */}
+            {uploadError && (
+              <div className={`mt-4 p-3 rounded-lg ${
+                uploadError.includes('successful') 
+                  ? 'bg-green-50 border border-green-200 text-green-800' 
+                  : 'bg-red-50 border border-red-200 text-red-800'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {uploadError.includes('successful') ? (
+                    <FaCheckCircle className="text-green-500" />
+                  ) : (
+                    <FaExclamationTriangle className="text-red-500" />
+                  )}
+                  <span className="text-sm font-medium">{uploadError}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -363,7 +411,7 @@ const Register = () => {
                   {postStatus.needsPayment ? 'Post Limit Reached' : 'Posts Available'}
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  {postStatus.remainingPosts} of {postStatus.totalPosts} free posts remaining
+                  {postStatus.remainingPosts} of {postStatus.totalPosts} posts remaining
                 </p>
               </div>
             </div>
