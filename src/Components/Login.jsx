@@ -20,32 +20,26 @@ const Login = () => {
     formState: { errors },
     reset
   } = useForm();
-
-  // Configure axios defaults
   useEffect(() => {
     axios.defaults.withCredentials = true;
     axios.defaults.timeout = 10000;
   }, []);
 
-  // Test backend connection on component mount
   useEffect(() => {
     const testConnection = async () => {
       try {
-        // Try multiple health endpoints
         const endpoints = ['/alb-health', '/health', '/healthz', '/simple-health'];
         
         for (const endpoint of endpoints) {
           try {
             await axios.get(`${API_BASE_URL}${endpoint}`, { timeout: 3000 });
             setBackendStatus('connected');
-            console.log(`✅ Backend connected via ${endpoint}`);
+            console.log(`✅ server connected via ${endpoint}`);
             return;
           } catch (endpointError) {
             continue;
           }
         }
-        
-        // If all endpoints fail
         setBackendStatus('disconnected');
         console.warn('❌ All backend health checks failed');
       } catch (error) {
@@ -56,15 +50,11 @@ const Login = () => {
 
     testConnection();
   }, [API_BASE_URL]);
-
-  // Redirect if already authenticated - FIXED: Check both authentication states
   useEffect(() => {
     console.log('🔄 Login component auth check:', { isAuthenticated, user });
     
     if (isAuthenticated && user && user.userId) {
       console.log('✅ User already authenticated, redirecting to Register...');
-      
-      // Use setTimeout to ensure the navigation happens after render
       const redirectTimer = setTimeout(() => {
         navigate("/Register", { 
           replace: true,
@@ -85,14 +75,10 @@ const Login = () => {
       setError('');
       
       console.log('🔐 Starting login process for:', formData.email);
-
-      // Use the AuthContext login method which handles the API call
       const result = await login(formData);
       
       if (result.success) {
         console.log('✅ Login successful via AuthContext, user:', result.user);
-        
-        // Add a small delay to ensure auth state is updated
         setTimeout(() => {
           navigate("/Register", { 
             replace: true,
@@ -103,23 +89,17 @@ const Login = () => {
           });
         }, 200);
       } else {
-        // AuthContext already set the error, but we need to display it here too
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error('❌ Login component error:', error);
-      
-      // Handle specific error cases
+      console.error('Login component error:', error);
       if (error.code === 'ECONNABORTED') {
         setError("Request timed out. Please try again.");
       } else if (!error.response) {
         setError("Network error. Please check your connection and ensure the backend is running.");
       } else {
-        // Use the error message from the caught error
         setError(error.message || "Login failed. Please try again.");
       }
-      
-      // Clear form on error
       reset();
     } finally {
       setLoading(false);
@@ -138,9 +118,8 @@ const Login = () => {
         <div className="p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800">Sign in to your account</h2>
-            <p className="text-gray-600 mt-2">Welcome back to ShopSphere</p>
+            <p className="text-gray-600 mt-2">Welcome back to ShopSpher</p>
             
-            {/* Connection Status */}
             <div className="flex items-center justify-center gap-3 mt-3">
               <div className="flex items-center gap-2">
                 <span 
@@ -150,8 +129,8 @@ const Login = () => {
                   }`}
                 ></span>
                 <p className="text-sm text-gray-500">
-                  {backendStatus === 'connected' && 'Backend connected ✅'}
-                  {backendStatus === 'disconnected' && 'Backend disconnected ❌'}
+                  {backendStatus === 'connected' && 'server connected ✅'}
+                  {backendStatus === 'disconnected' && 'server disconnected ❌'}
                   {backendStatus === 'checking' && 'Checking connection... 🔄'}
                 </p>
               </div>
@@ -167,8 +146,8 @@ const Login = () => {
 
           {backendStatus === 'disconnected' && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-3 rounded-md text-center mb-4">
-              <p className="text-sm font-medium">Backend connection issue</p>
-              <p className="text-xs mt-1">Please ensure the server is running at {API_BASE_URL}</p>
+              <p className="text-sm font-medium">Network connection issue</p>
+              {/* <p className="text-xs mt-1">Please ensure the server is running at {API_BASE_URL}</p> */}
             </div>
           )}
           

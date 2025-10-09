@@ -3,11 +3,15 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { CartContext } from './Cartcontext';
-import { fetchShippingAddress } from '../Components/Shipping'; // Adjust the import path
+import { fetchShippingAddress } from '../Components/Shipping'; 
+import { useAuth } from './context/AuthContext';
+import { FaPhone, FaDollarSign, FaBoxes, FaClipboard, FaLocationArrow, FaCrown, FaCheckCircle, FaExclamationTriangle, FaRedo, FaCreditCard } from 'react-icons/fa';
+
 
 const Order = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { isAuthenticated, user: authUser, isLoading: authLoading } = useAuth();
   const { id } = useParams();
   const location = useLocation();
   const [error, setError] = useState('');
@@ -38,6 +42,13 @@ const Order = () => {
 
   useEffect(() => {
     try {
+        if (!authLoading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login...');
+      navigate('/login', { 
+        replace: true,
+        state: { from: location.pathname }
+      });
+    }
       const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const shippingFee = subtotal > 0 ? 50 : 0;
       const tax = subtotal * 0.1;
@@ -53,7 +64,7 @@ const Order = () => {
       console.error("Error calculating order breakdown:", error);
       setError("Failed to calculate order totals");
     }
-  }, [cart]);
+  }, [cart,authLoading,sAuthenticated]);
 
   // Function to handle authentication errors
   const handleAuthError = (error) => {
@@ -69,8 +80,6 @@ const Order = () => {
   const handlePlaceOrder = async () => { 
     try {
       setIsPlacingOrder(true);
-      
-      // Use the shipping address from Redux store
       const currentShippingAddress = shippingAddress;
       
       if (!isValidAddress(currentShippingAddress)) {
@@ -106,7 +115,7 @@ const Order = () => {
       const response = await axios.post(
         `${API_BASE_URL}/api/orders/postorders`,
         orderPayload,
-        { withCredentials: true } // Send cookies with the request
+        { withCredentials: true } 
       );
       
       setOrderConfirmation({
@@ -158,8 +167,27 @@ const Order = () => {
     if (typeof error === 'object') return JSON.stringify(error);
     return 'An unknown error occurred';
   };
-
-  // Combine loading states
+  if (authLoading) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Checking authentication...</p>
+            </div>
+          </div>
+        );
+      }
+      if (!isAuthenticated) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+            <div className="text-center">
+              <FaExclamationTriangle className="text-yellow-500 text-5xl mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h3>
+              <p className="text-gray-600 mb-4">Redirecting to login page...</p>
+            </div>
+          </div>
+        );
+      }
   const isLoadingData = shippingLoading;
 
   if (isLoadingData && !shippingAddress) {

@@ -2,7 +2,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { CartContext } from './Cartcontext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import { FaPhone, FaDollarSign, FaBoxes, FaClipboard, FaLocationArrow, FaCrown, FaCheckCircle, FaExclamationTriangle, FaRedo, FaCreditCard } from 'react-icons/fa';
 const Cart = () => {
+  const { isAuthenticated, user: authUser, isLoading: authLoading } = useAuth();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   const { cart, removeFromCart, updateQuantity } = useContext(CartContext);
   console.log(cart)
@@ -49,11 +52,14 @@ const Cart = () => {
       }else{
         throw new Error(`invalid product data in ${cart.length} items(s)`)
       }
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+     if (!authLoading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login...');
+      navigate('/login', { 
+        replace: true,
+        state: { from: location.pathname }
+      });
+    }
+      
       const orderData = {
         cartItems: cart.map(item => ({
           productId: item._id,
@@ -79,16 +85,9 @@ const Cart = () => {
       };
       console.log(orderData)
       const orderResponse = await axios.post(
-        `${API_BASE_URL}/api/orders/postorders`,
-        // 'http://localhost:3200/api/orders/postorders',
-        orderData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+        `${API_BASE_URL}/api/orders/postorders`,orderData,{
+          withCredentials:true
+        });
       console.log({cartItems:cart,order:orderResponse.data})
       navigate('/Order', { state: {cartItems:cart, order: orderResponse.data } });
     } catch (err) {
@@ -98,6 +97,27 @@ const Cart = () => {
       setLoading(false);
     }
   };
+   if (authLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      );
+    }
+    if (!isAuthenticated) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+          <div className="text-center">
+            <FaExclamationTriangle className="text-yellow-500 text-5xl mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h3>
+            <p className="text-gray-600 mb-4">Redirecting to login page...</p>
+          </div>
+        </div>
+      );
+    }
 
   return (
     <div className="container mx-auto p-4">

@@ -50,7 +50,7 @@ const AppContent = () => {
       <Userscontext>
         <CartProvider>
           <Routes>
-            {/* Body wrapper for common layout - applies to all routes */}
+            {/* Routes that use the Body layout */}
             <Route path="/" element={<Body />}>
               {/* Public routes */}
               <Route index element={<Home />} />
@@ -96,21 +96,23 @@ const AppContent = () => {
                   <OrderConfirmation />
                 </ProtectedRoute>
               } />
-              <Route path="seller" element={
-                <ProtectedRoute>
-                  <Seller />
-                </ProtectedRoute>
-              } />
               <Route path="customerorders" element={
                 <ProtectedRoute>
                   <CustomerOrders />
                 </ProtectedRoute>
               } />
-              
-              {/* Admin routes */}
-              <Route path="admin" element={<Admin />} />
-              <Route path="adminlogin" element={<AdminLogin />} />
             </Route>
+            
+            {/* Standalone routes outside Body layout */}
+            <Route path="/seller" element={
+              <ProtectedRoute>
+                <Seller />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin routes (outside Body layout if needed) */}
+            <Route path="admin" element={<Admin />} />
+            <Route path="adminlogin" element={<AdminLogin />} />
           </Routes>
           
           {/* Auth debugger - only in development */}

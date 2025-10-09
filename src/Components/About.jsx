@@ -1,12 +1,12 @@
 import React from 'react';
 import { FaTruck, FaUndo, FaQuestionCircle, FaShieldAlt, FaStar,FaCrown,  FaHeadset, FaLock, FaGlobe } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 const About = () => {
-  const navigate = useNavigate()
-  const handlecall = ()=>{
-    const phonecontact = '08086622565'
-    window.location.href=`${phonecontact}`
-  }
+  // const navigate = useNavigate()
+  // const handlecall = ()=>{
+  //   const phonecontact = '08086622565'
+  //   window.location.href=`${phonecontact}`
+  // }
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="relative py-20 bg-gradient-to-r from-blue-900 to-indigo-800 text-white overflow-hidden">
@@ -16,9 +16,10 @@ const About = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">About ShopSpher</h1>
-            <p className="text-xl md:text-2xl mb-8 leading-relaxed">
-              Your Trusted Desti                                                                                                                                                                                                                                                                                                                                   nation for Quality Products and Exceptional Service
-            </p>
+            <p className="text-xl md:text-2xl mb-8" >Your Trusted Destination for Quality Products and Exceptional Service</p>
+            {/* <p className="text-xl md:text-2xl mb-8 leading-relaxed">
+              Your Trusted                                                                                                                                                                                                                                                                                                                                  nation for Quality Products and Exceptional Service
+            </p>  */}
             <div className="flex flex-wrap justify-center gap-6">
               <div className="flex items-center bg-blue-800 bg-opacity-50 px-4 py-2 rounded-full">
                 <FaTruck className="mr-2 text-amber-400" />
@@ -167,8 +168,11 @@ const About = () => {
                     
                     <div>
                       <h5 className="font-bold text-lg mb-2">What payment methods do you accept?</h5>
-                      <p className="text-gray-600">
+                      {/* <p className="text-gray-600">
                         We accept all major credit/debit cards (Visa, Mastercard, American Express), PayPal, Apple Pay, Google Pay, and ShopSpher Gift Cards.
+                      </p> */}
+                      <p className='className="text-gray-600'>
+                        we accept bank transactions
                       </p>
                     </div>
                     
@@ -181,7 +185,7 @@ const About = () => {
                     <div>
                       <h5 className="font-bold text-lg mb-2">Do I have to pay before shipping?</h5>
                       <p className="text-gray-600">
-                        No, Please avoid any form of says that you have to pay for orders before shipping .
+                        No, Please avoid any form of saying that you have to pay for orders before shipping .
                         Payment is made at the point of confirmation of orders.
                       </p>
                     </div>
@@ -278,7 +282,7 @@ const About = () => {
             Our customer support team is available 24/7 to assist you with any questions or concerns.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <button onClick={handlecall} className="bg-amber-500 cursor-pointer hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
+            <button  className="bg-amber-500 cursor-pointer hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full transition duration-300 transform hover:scale-105">
               Contact Support
             </button>
             <button className="bg-transparent border-2 border-white hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-full transition duration-300">

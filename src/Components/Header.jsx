@@ -158,7 +158,7 @@ const Header = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 type="text"
-                placeholder="Search products "
+                placeholder="search products "
                 className={`bg-transparent outline-none w-30 lg:w-70 transition-all duration-300 ${
                   scrolled ? 'text-gray-700 placeholder-gray-500' : 'text-black placeholder-white placeholder-opacity-70'
                 }`}
@@ -201,7 +201,6 @@ const Header = () => {
                   </span>
                 )}
               </div>
-              {/* Desktop hover tooltip */}
               <div className="hidden md:block absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                 <h3 className="font-bold text-gray-800 mb-2">Your Cart</h3>
                 <p className="text-gray-600 text-sm">{cartCount} items</p>
@@ -238,8 +237,6 @@ const Header = () => {
             </button>
           </div>
         </div>
-        
-        {/* Mobile Menu */}
         <div 
           className={`md:hidden fixed inset-0 bg-black bg-opacity-90 z-40 transition-opacity duration-300 ${
             mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'

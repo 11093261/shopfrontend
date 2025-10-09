@@ -31,19 +31,15 @@ const Register = () => {
   const fileInputRef = useRef(null);
 
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm();
-
-  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      console.log('❌ User not authenticated, redirecting to login...');
+      console.log('User not authenticated, redirecting to login...');
       navigate('/login', { 
         replace: true,
         state: { from: location.pathname }
       });
     }
   }, [isAuthenticated, authLoading, navigate, location]);
-
-  // Load post status when authenticated
   useEffect(() => {
     if (isAuthenticated && authUser) {
       checkPostLimit();
@@ -52,7 +48,6 @@ const Register = () => {
 
   const checkPostLimit = async () => {
     try {
-      // FIXED: Changed to match backend endpoint /api/payment/posts/status
       const response = await axios.get(`${API_BASE_URL}/api/posts/status`, {
         withCredentials: true,
         timeout: 5000
@@ -68,7 +63,6 @@ const Register = () => {
       });
     } catch (error) {
       console.error('Error checking post limit:', error);
-      // Default to free tier if API fails
       setPostStatus({
         usedPosts: 0,
         remainingPosts: FREE_POST_LIMIT,
@@ -130,18 +124,14 @@ const Register = () => {
       handleImageChange(syntheticEvent);
     }
   };
-
-  // FIXED: Updated to match backend endpoint /api/payment/initialize
   const handlePayment = async (paymentMethod = 'card') => {
     setPaymentProcessing(true);
     try {
-      // FIXED: Changed endpoint to /api/payment/initialize (matches backend)
       const response = await axios.post(`${API_BASE_URL}/api/payment/initialize`, {}, {
         withCredentials: true
       });
 
       if (response.data.authorization_url) {
-        // Redirect to Paystack payment page
         window.location.href = response.data.authorization_url;
       } else {
         throw new Error('No payment URL received');
@@ -157,8 +147,6 @@ const Register = () => {
       setPaymentProcessing(false);
     }
   };
-
-  // FIXED: Added payment verification function
   const verifyPayment = async (reference) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/payment/verify/${reference}`, {
@@ -168,7 +156,6 @@ const Register = () => {
       if (response.data.success) {
         setUploadError('Payment successful! You can now post more products.');
         setShowPaymentModal(false);
-        // Refresh post status
         await checkPostLimit();
       } else {
         setUploadError(`Payment verification failed: ${response.data.error}`);
@@ -178,8 +165,6 @@ const Register = () => {
       setUploadError('Payment verification failed. Please check your payment status.');
     }
   };
-
-  // FIXED: Check for payment verification on component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentReference = urlParams.get('reference');
@@ -196,14 +181,10 @@ const Register = () => {
       navigate('/login');
       return;
     }
-
-    // Check if user needs to pay for more posts
     if (postStatus.needsPayment || postStatus.remainingPosts <= 0) {
       setShowPaymentModal(true);
       return;
     }
-
-    // Validate image file
     if (!imageFile) {
       setUploadError('Please select a product image');
       return;
@@ -214,16 +195,12 @@ const Register = () => {
     
     try {
       const formData = new FormData();
-      
-      // Add all form data with proper field names matching backend schema
       formData.append('sellername', data.sellername);
       formData.append('price', parseFloat(data.price));
       formData.append('phonenumber', data.phonenumber);
       formData.append('description', data.description);
       formData.append('quantity', parseInt(data.quantity) || 1);
       formData.append('location', data.location);
-      
-      // Add image file
       formData.append('imageUrl', imageFile);
 
       console.log('🔄 Submitting product data...', {
@@ -246,16 +223,12 @@ const Register = () => {
       
       if (response.data) {
         console.log('✅ Product listed successfully:', response.data);
-        
-        // Update post status
         setPostStatus(prev => ({
           ...prev,
           usedPosts: prev.usedPosts + 1,
           remainingPosts: prev.remainingPosts - 1,
           needsPayment: prev.remainingPosts - 1 <= 0
         }));
-        
-        // Show success and reset form
         setUploadError('Product listed successfully!');
         reset();
         setImagePreview(null);
@@ -286,7 +259,6 @@ const Register = () => {
     }
   };
 
-  // Payment Modal Component
   const PaymentModal = () => {
     if (!showPaymentModal) return null;
 

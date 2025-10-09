@@ -7,7 +7,9 @@ import {
 import { FaBox, FaUserEdit, FaUserTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 const Admin = () => {
+  const { isAuthenticated, user: authUser, isLoading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardData, setDashboardData] = useState({});
@@ -29,6 +31,7 @@ const Admin = () => {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   
   const getStatusColor = (status) => {
+    
     switch (status) {
       case 'Delivered': return 'bg-green-100 text-green-800';
       case 'Shipped': return 'bg-blue-100 text-blue-800';
@@ -51,11 +54,14 @@ const Admin = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
+        if (!authLoading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login...');
+      navigate('/login', { 
+        replace: true,
+        state: { from: location.pathname }
+      });
+    }
+      
       
 
         let endpoint = '';
@@ -110,24 +116,28 @@ const Admin = () => {
       setError('Authentication required');
       setIsLoading(false);
     }
-  }, [activeTab, token]);
+  }, [activeTab, authLoading, isAuthenticated, token]);
 
   const updateOrderStatus = async (orderId,newStatus) => {
     try {
-       const config = {
-         headers: {
-         Authorization: `Bearer ${token}`
-         }
-       };
-      console.log(config)
+      //  const config = {
+      //    headers: {
+      //    Authorization: `Bearer ${token}`
+      //    }
+      //  };
+      // console.log(config)
         await axios.put(
           `http://localhost:3200/api/order/${orderId}/status`,
           { status: newStatus },
-          config
+          {
+            withCredentials:true
+          }
       );
       const response = await axios.get(
         'http://localhost:3200/api/orders', 
-        config
+        {
+          withCredentials:true
+        }
       );
       console.log(response.data)
       setOrders(response.data);
@@ -141,20 +151,26 @@ const Admin = () => {
 
   const updateUserRole = async (userId,newRole) => {
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
+      // const config = {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`
+      //   }
+
+      // };
+      
       
        await axios.put(
          `http://localhost:3200/api/users/${userId}/role`,
          { role: newRole },
-         config
+         {
+          withCredentials:true
+         }
        );
       const response = await axios.get(
         'http://localhost:3200/api/users', 
-        config
+        {
+          withCredentials:true
+        }
       );
       setUsers(response.data);
     } catch (err) {
@@ -165,20 +181,20 @@ const Admin = () => {
 
   const deleteUser = async (userId) => {
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      };
+    
       
       await axios.delete(
         `http://localhost:3200/api/users/${userId}`,
-        config
+        {
+          withCredentials:true
+        }
       );
       
       const response = await axios.get(
         'http://localhost:3200/api/users', 
-        config
+        {
+          withCredentials:true
+        }
       );
       setUsers(response.data);
     } catch (err) {
@@ -188,10 +204,10 @@ const Admin = () => {
   };
   const handleNewUsers = (productId) =>{
     try {
-      const config = {
-        headers:{"Authorization": `Bearer ${token}`}
-      }
-      const response = axios.delete(`http://localhost:3200/api/productdelete/${productId}`,config)
+      
+      const response = axios.delete(`http://localhost:3200/api/productdelete/${productId}`,{
+        withCredentials:true
+      })
       setAddNew(response.data)
       localStorage.setItem("products",JSON.stringify(addNew))
       if(addNew){

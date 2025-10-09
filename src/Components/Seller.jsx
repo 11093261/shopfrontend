@@ -7,10 +7,9 @@ import {
   IoSend, IoClose, IoBusiness, IoPerson, IoVideocam, IoEllipsisVertical 
 } from 'react-icons/io5';
 import io from 'socket.io-client';
-import {fetchOrderInfo} from "../Components/Getorderinfo"
+import { fetchOrderInfo } from "../Components/Getorderinfo"
+import { useAuth } from './context/AuthContext';
 
-
-// Helper function to get cookie value
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -18,12 +17,15 @@ const getCookie = (name) => {
   return null;
 };
 
-
 const Seller = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { selectedSeller, sellerLoading, sellerError } = useSelector((state) => state.home);
-  const currentUser = useSelector((state) => state.auth?.user || null);
+  const userOrdersInfo = useSelector((state) => state.getorderInfo);
+  
+  // Use AuthContext for authentication instead of Redux
+  const { isAuthenticated, user: authUser, isLoading: authLoading } = useAuth();
+  
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   
   const [showChat, setShowChat] = useState(false);
@@ -36,153 +38,163 @@ const Seller = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState('');
   const [unreadCounts, setUnreadCounts] = useState({});
-  const userOrdersInfo = useSelector((state)=>state.getorderInfo)
-  const [showUserInfo,setUserInfo]=useState(userOrdersInfo)
+  const [showUserInfo, setUserInfo] = useState(userOrdersInfo);
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
+  // Authentication check - redirect if not authenticated
   useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  // Handle seller data and view type
+  useEffect(() => {  
     if (!selectedSeller) {
       navigate('/');
       return;
     }
-    if (currentUser && currentUser._id === selectedSeller._id) {
+    
+    // Use authUser from AuthContext instead of Redux
+    if (authUser && authUser.userId === selectedSeller._id) {
       setIsSellerView(true);
     }
-  }, [selectedSeller, currentUser, navigate]);
+  }, [selectedSeller, authUser, navigate]);
   
+  // Socket connection with proper authentication
   useEffect(() => {
-    if (selectedSeller && selectedSeller._id) {
-      const token = getCookie('token');
+    // Only connect if authenticated and seller data is available
+    if (!isAuthenticated || authLoading || !selectedSeller || !selectedSeller._id) {
+      return;
+    }
+
+    const token = getCookie('token');
+    
+    socketRef.current = io(`${API_BASE_URL}`, {
+      auth: {
+        token: token
+      },
+      query: {
+        sellerId: selectedSeller._id,
+        userId: authUser?.userId || 'guest',
+        userType: isSellerView ? 'seller' : 'buyer',
+        userName: authUser?.name || 'Guest User'
+      },
+      withCredentials: true 
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('Connected to chat server');
+      setIsConnected(true);
       
-      socketRef.current = io(`${API_BASE_URL}`, {
-        auth: {
-          token: token
-        },
-        query: {
+      if (isSellerView) {
+        console.log('Seller connected, waiting for conversations');
+      } else {
+        const roomId = `chat_${selectedSeller._id}_${authUser?.userId || 'guest'}`;
+        socketRef.current.emit('join_chat', {
+          roomId,
           sellerId: selectedSeller._id,
-          userId: currentUser?._id || 'guest',
-          userType: isSellerView ? 'seller' : 'buyer',
-          userName: currentUser?.name || 'Guest User'
-        },
-        withCredentials: true 
-      });
-
-      socketRef.current.on('connect', () => {
-        console.log('Connected to chat server');
-        setIsConnected(true);
-        
-        if (isSellerView) {
-          console.log('Seller connected, waiting for conversations');
-        } else {
-          const roomId = `chat_${selectedSeller._id}_${currentUser?._id || 'guest'}`;
-          socketRef.current.emit('join_chat', {
-            roomId,
-            sellerId: selectedSeller._id,
-            userId: currentUser?._id || 'guest'
-          });
-        }
-      });
-
-      socketRef.current.on('disconnect', () => {
-        console.log('Disconnected from chat server');
-        setIsConnected(false);
-      });
-
-      socketRef.current.on('message_received', (message) => {
-        setMessages(prev => [...prev, message]);
-        if (isSellerView && activeConversation && 
-            activeConversation.buyerId !== message.userId) {
-          setUnreadCounts(prev => ({
-            ...prev,
-            [message.userId]: (prev[message.userId] || 0) + 1
-          }));
-        }
-      });
-
-      socketRef.current.on('previous_messages', (chatHistory) => {
-        setMessages(chatHistory);
-      });
-      
-      socketRef.current.on('previous_conversations', (conversationList) => {
-        setConversations(conversationList);
-      });
-      
-      socketRef.current.on('new_conversation', (conversation) => {
-        setConversations(prev => [...prev, conversation]);
-      });
-      
-      socketRef.current.on('conversation_messages', (messageHistory) => {
-        setMessages(messageHistory);
-        if (isSellerView && activeConversation) {
-          setUnreadCounts(prev => ({
-            ...prev,
-            [activeConversation.buyerId]: 0
-          }));
-        }
-      });
-      
-      socketRef.current.on('new_message_notification', (data) => {
-        if (Notification.permission === 'granted') {
-          new Notification(`New message from ${data.buyerName}`, {
-            body: data.message,
-            icon: selectedSeller.imageUrl
-          });
-        }
-        socketRef.current.emit('send_message', messageData, (ack) => {
-          if (ack.status === 'success') {
-            console.log('Message delivered to server');
-          } else {
-          }
+          userId: authUser?.userId || 'guest'
         });
-        socketRef.current.on('message_received', (message) => {
-          setMessages(prev => {
-            const newMessages = [...prev, message];
-            return newMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-          });
-        });
+      }
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from chat server');
+      setIsConnected(false);
+    });
+
+    socketRef.current.on('message_received', (message) => {
+      setMessages(prev => [...prev, message]);
+      if (isSellerView && activeConversation && 
+          activeConversation.buyerId !== message.userId) {
         setUnreadCounts(prev => ({
           ...prev,
-          [data.buyerId]: (prev[data.buyerId] || 0) + 1
+          [message.userId]: (prev[message.userId] || 0) + 1
         }));
-      });
-      
-      socketRef.current.on('user_typing', (data) => {
-        if (data.typing) {
-          setIsTyping(true);
-          setTypingUser(data.userName);
-        } else {
-          setIsTyping(false);
-          setTypingUser('');
-        }
-      });
-      
-      socketRef.current.on('error', (error) => {
-        console.error('Socket error:', error);
-      });
-      
-      if (Notification.permission === 'default') {
-        Notification.requestPermission();
       }
-      
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-        }
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-      };
+    });
+
+    socketRef.current.on('previous_messages', (chatHistory) => {
+      setMessages(chatHistory);
+    });
+    
+    socketRef.current.on('previous_conversations', (conversationList) => {
+      setConversations(conversationList);
+    });
+    
+    socketRef.current.on('new_conversation', (conversation) => {
+      setConversations(prev => [...prev, conversation]);
+    });
+    
+    socketRef.current.on('conversation_messages', (messageHistory) => {
+      setMessages(messageHistory);
+      if (isSellerView && activeConversation) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [activeConversation.buyerId]: 0
+        }));
+      }
+    });
+    
+    socketRef.current.on('new_message_notification', (data) => {
+      if (Notification.permission === 'granted') {
+        new Notification(`New message from ${data.buyerName}`, {
+          body: data.message,
+          icon: selectedSeller.imageUrl
+        });
+      }
+      setUnreadCounts(prev => ({
+        ...prev,
+        [data.buyerId]: (prev[data.buyerId] || 0) + 1
+      }));
+    });
+    
+    socketRef.current.on('user_typing', (data) => {
+      if (data.typing) {
+        setIsTyping(true);
+        setTypingUser(data.userName);
+      } else {
+        setIsTyping(false);
+        setTypingUser('');
+      }
+    });
+    
+    socketRef.current.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+    
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
     }
-  }, [selectedSeller, currentUser, isSellerView, activeConversation]);
+    
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [selectedSeller, authUser, isSellerView, activeConversation, isAuthenticated, authLoading]);
   
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  useEffect(() => {
+    try {
+      dispatch(fetchOrderInfo())
+    } catch(error) {
+      console.log(error)
+    }
+  }, [dispatch]);
 
   const handleCallSeller = () => {
     if (selectedSeller?.phonenumber) {
@@ -225,15 +237,15 @@ const Seller = () => {
           senderName: selectedSeller.sellername || selectedSeller.businessName
         };
       } else {
-        roomId = `chat_${selectedSeller._id}_${currentUser?._id || 'guest'}`;
+        roomId = `chat_${selectedSeller._id}_${authUser?.userId || 'guest'}`;
         messageData = {
           roomId,
           sellerId: selectedSeller._id,
-          userId: currentUser?._id || 'guest',
+          userId: authUser?.userId || 'guest',
           message: newMessage.trim(),
           timestamp: new Date(),
           sender: 'buyer',
-          senderName: currentUser?.name || 'Guest User'
+          senderName: authUser?.name || 'Guest User'
         };
       }
       socketRef.current.emit('send_message', messageData);
@@ -254,14 +266,14 @@ const Seller = () => {
       if (isSellerView && activeConversation) {
         roomId = `chat_${selectedSeller._id}_${activeConversation.buyerId}`;
       } else {
-        roomId = `chat_${selectedSeller._id}_${currentUser?._id || 'guest'}`;
+        roomId = `chat_${selectedSeller._id}_${authUser?.userId || 'guest'}`;
       }
       socketRef.current.emit('typing_start', {
         roomId,
         userType: isSellerView ? 'seller' : 'buyer',
         userName: isSellerView 
           ? selectedSeller.sellername || selectedSeller.businessName 
-          : currentUser?.name || 'Guest User'
+          : authUser?.name || 'Guest User'
       });
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -293,37 +305,38 @@ const Seller = () => {
       return messageTime.toLocaleDateString();
     }
   };
-  useEffect(()=>{
-    try{
-      dispatch(fetchOrderInfo())
-    }catch(error){
-      console.log(error)
-    }
-  },[dispatch])
 
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while fetching seller data
   if (sellerLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <div className="text-gray-700 space-y-2">
-              {showUserInfo ?(
-                <div className='flex flex-col justify-center items-center h-[40vh] md:w-[100%] w-[50%] sm:w-[50%]'>
-                  <p className="font-medium">{userOrdersInfo.fullName}</p>
-                  <p>{userOrdersInfo.street}</p>
-                  <p>{userOrdersInfo.city}, {userOrdersInfo.state} {userOrdersInfo.zip}</p>
-                  <p>Phone: {userOrdersInfo.phone}</p>
-                </div>
-
-              ):(
-                <p>........</p>
-              )
-              }
+        <div className="text-gray-700 space-y-2">
+          {showUserInfo ? (
+            <div className='flex flex-col justify-center items-center h-[40vh] md:w-[100%] w-[50%] sm:w-[50%]'>
+              <p className="font-medium">{userOrdersInfo.fullName}</p>
+              <p>{userOrdersInfo.street}</p>
+              <p>{userOrdersInfo.city}, {userOrdersInfo.state} {userOrdersInfo.zip}</p>
+              <p>Phone: {userOrdersInfo.phone}</p>
             </div>
-                
-              
+          ) : (
+            <p>........</p>
+          )}
+        </div>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading seller information...</p>
-
         </div>
       </div>
     );
@@ -348,7 +361,7 @@ const Seller = () => {
               Try Again
             </button>
             <button
-              onClick={() => navigate('/Home')}
+              onClick={() => navigate('/')}
               className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors"
             >
               Go Home

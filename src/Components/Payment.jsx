@@ -10,8 +10,6 @@ const Payment = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
-  // const oldApi = "http://localhost:3200/api/orderpayment"
-  
   const { 
     shippingAddress, 
     cartItems 
