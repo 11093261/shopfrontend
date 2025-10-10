@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FaShoppingCart, FaUser, FaSearch, FaBars, FaTimes, FaCrown, FaSearchengin, FaPlus } from 'react-icons/fa';
-import { useContext } from 'react';
 import { CartContext } from './Cartcontext';
-import { fetchProducts, filterProducts } from './HomeApi';
-import { useDispatch} from 'react-redux';
-import { useSelector } from 'react-redux';
+import { fetchProducts, filterProducts, setSearchTerm } from './HomeApi';
+import { useDispatch, useSelector } from 'react-redux';
 
 const Navs = [
   { path: '/', name: 'Home' },
@@ -14,19 +12,32 @@ const Navs = [
 ];
 
 const Header = () => {
-  const productData = useSelector((state)=>state.home.data)
-  const {cart} = useContext(CartContext)
+  const productData = useSelector((state) => state.home.data);
+  const searchTerm = useSelector((state) => state.home.searchTerm || "");
+  const { cart } = useContext(CartContext);
 
   const navigate = useNavigate();
   const [toggle, setToggle] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const [mobileCartOpen, setMobileCartOpen] = useState(false); // New state for mobile cart
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const headerRef = useRef(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const dispatch = useDispatch()
-  
+  const dispatch = useDispatch();
+
+  // Search handler using Redux
+  const handleSearch = (term) => {
+    dispatch(setSearchTerm(term));
+    dispatch(filterProducts({ 
+      searchTerm: term
+    }));
+  };
+
+  const clearSearch = () => {
+    dispatch(setSearchTerm(''));
+    dispatch(fetchProducts());
+  };
+
   useEffect(() => {
     const newTotal = cart.reduce((sum, item) => {
       return sum + (item.quantity);
@@ -35,8 +46,8 @@ const Header = () => {
   }, [cart]);
 
   useEffect(() => {
-    dispatch(fetchProducts())
-  }, [dispatch])
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -76,37 +87,19 @@ const Header = () => {
 
   const handleAdmin = () => navigate('/Admin');
 
-  // Add this function for Register page navigation
   const handleRegister = () => {
     navigate('/Register');
     setMobileMenuOpen(false);
   };
 
-  // New function to handle cart click on mobile
   const handleCartClick = () => {
-    if (window.innerWidth < 768) { // Mobile view
+    if (window.innerWidth < 768) {
       setMobileCartOpen(true);
     } else {
-      // Desktop behavior remains the same (hover)
       navigate('/cart');
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      dispatch(filterProducts(searchQuery));
-      navigate('/Home');
-      setMobileMenuOpen(false);
-    }
-  };
-
-  const clearSearch = () => {
-    setSearchQuery("");
-    dispatch(fetchProducts()); // Reset to show all products
-  };
-
-  // Calculate cart totals for mobile view
   const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingFee = cartSubtotal > 0 ? 50 : 0;
   const tax = cartSubtotal * 0.001;
@@ -150,20 +143,21 @@ const Header = () => {
           </nav>
           
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <form onSubmit={handleSearch} className={`hidden md:flex items-center gap-[10px] transition-all duration-300 ${
-              scrolled ? 'bg-gray-100' : 'bg-white  bg-opacity-20'
+            {/* Search Bar - Desktop */}
+            <div className={`hidden md:flex items-center gap-[10px] transition-all duration-300 ${
+              scrolled ? 'bg-gray-100' : 'bg-white bg-opacity-20'
             } rounded-full px-4 py-1`}>
               <FaSearchengin className={scrolled ? "text-gray-500" : "text-white"} />
               <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
                 type="text"
-                placeholder="search products "
+                placeholder="Search products..."
                 className={`bg-transparent outline-none w-30 lg:w-70 transition-all duration-300 ${
                   scrolled ? 'text-gray-700 placeholder-gray-500' : 'text-black placeholder-white placeholder-opacity-70'
                 }`}
               />
-              {searchQuery && (
+              {searchTerm && (
                 <button 
                   type="button"
                   onClick={clearSearch}
@@ -172,22 +166,9 @@ const Header = () => {
                   <FaTimes />
                 </button>
               )}
-            </form>
+            </div>
             
-            {/* List Product Button - Desktop */}
-            {/* <button
-              onClick={handleRegister}
-              className={`hidden md:flex items-center justify-center cursor-pointer w-32 h-10 rounded-full font-medium transition-all duration-300 ${
-                scrolled 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
-                  : 'bg-green-500 text-white hover:bg-green-600'
-              }`}
-            >
-              <FaPlus className="mr-2" />
-              List Product
-            </button> */}
-            
-            {/* Cart Icon - Updated for mobile click */}
+            {/* Cart Icon */}
             <div className="relative cursor-pointer group">
               <div className="relative" onClick={handleCartClick}>
                 <FaShoppingCart 
@@ -237,6 +218,8 @@ const Header = () => {
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
         <div 
           className={`md:hidden fixed inset-0 bg-black bg-opacity-90 z-40 transition-opacity duration-300 ${
             mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -267,7 +250,6 @@ const Header = () => {
                   </li>
                 ))}
                 
-                {/* List Product Button - Mobile */}
                 <li className="border-b border-gray-100">
                   <button
                     onClick={handleRegister}
@@ -292,16 +274,17 @@ const Header = () => {
               </ul>
             </nav>
             
+            {/* Mobile Search */}
             <div className="px-6 pb-4">
-              <form onSubmit={handleSearch} className="flex items-center bg-gray-100 rounded-full px-3 py-2">
+              <div className="flex items-center bg-gray-100 rounded-full px-3 py-2">
                 <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
                   type="text"
-                  placeholder="Search products or sellers..."
+                  placeholder="Search products..."
                   className="bg-transparent outline-none w-full text-gray-700"
                 />
-                {searchQuery && (
+                {searchTerm && (
                   <button 
                     type="button"
                     onClick={clearSearch}
@@ -310,10 +293,8 @@ const Header = () => {
                     <FaTimes />
                   </button>
                 )}
-                <button type="submit">
-                  <FaSearch className="text-gray-500" />
-                </button>
-              </form>
+                <FaSearch className="text-gray-500" />
+              </div>
             </div>
           </div>
         </div>
@@ -343,7 +324,6 @@ const Header = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Cart Items */}
                     <div className="space-y-4 mb-6">
                       {cart.map(item => (
                         <div key={item._id} className="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
@@ -367,7 +347,6 @@ const Header = () => {
                       ))}
                     </div>
                     
-                    {/* Order Summary */}
                     <div className="bg-gray-50 p-4 rounded-lg mb-4">
                       <h3 className="font-bold text-lg mb-3">Order Summary</h3>
                       <div className="space-y-2">
@@ -390,7 +369,6 @@ const Header = () => {
                       </div>
                     </div>
                     
-                    {/* Action Buttons */}
                     <div className="space-y-3">
                       <button 
                         onClick={() => {

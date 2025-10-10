@@ -20,6 +20,54 @@ const Home = () => {
   const filteredProducts = useSelector((state) => state.home.filteredData || state.home.data);
   const searchTerm = useSelector((state) => state.home.searchTerm || "");
   const loading = useSelector((state) => state.home.loading);
+  const allProducts = useSelector((state) => state.home.data || []);
+
+  // Enhanced price extraction with better error handling
+  const extractPrice = (product) => {
+    if (!product) return 0;
+    
+    try {
+      if (typeof product.price === 'number') {
+        return product.price;
+      }
+      
+      if (typeof product.price === 'string') {
+        // Remove all non-numeric characters except dots
+        const cleanPrice = product.price.replace(/[^\d.]/g, '');
+        const priceValue = parseFloat(cleanPrice);
+        return isNaN(priceValue) ? 0 : priceValue;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Error extracting price:', error, product);
+      return 0;
+    }
+  };
+
+  // Calculate price range from actual data
+  useEffect(() => {
+    if (allProducts.length > 0) {
+      const prices = allProducts.map(product => extractPrice(product)).filter(price => price > 0);
+      if (prices.length > 0) {
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        setPriceRange([minPrice, maxPrice]);
+      }
+    }
+  }, [allProducts]);
+
+  // Debugging useEffect to check prices
+  useEffect(() => {
+    if (filteredProducts.length > 0) {
+      console.log('Sample product prices:', filteredProducts.slice(0, 3).map(p => ({
+        name: p.name,
+        rawPrice: p.price,
+        extractedPrice: extractPrice(p),
+        formattedPrice: getProductPriceDisplay(p)
+      })));
+    }
+  }, [filteredProducts]);
 
   const handleRegister = () => {
     if (isAuthenticated) {
@@ -42,8 +90,13 @@ const Home = () => {
   };
   
   const renderStars = (rating) => {
+    const validRating = rating || 0;
     return Array(5).fill(0).map((_, i) => (
-      <IoStar key={i} className={i < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"} />
+      <IoStar 
+        key={i} 
+        className={i < Math.floor(validRating) ? "text-yellow-400" : "text-gray-300"} 
+        size={14}
+      />
     ));
   };
   
@@ -68,17 +121,83 @@ const Home = () => {
   };
   
   const clearFilters = () => {
-    setPriceRange([0, 100000]);
+    // Reset to calculated range or default
+    const prices = allProducts.map(product => extractPrice(product)).filter(price => price > 0);
+    const defaultMin = prices.length > 0 ? Math.min(...prices) : 0;
+    const defaultMax = prices.length > 0 ? Math.max(...prices) : 100000;
+    
+    setPriceRange([defaultMin, defaultMax]);
     setCategoryFilter('all');
     setRatingFilter(0);
     dispatch(setSearchTerm(''));
     dispatch(fetchProducts());
     setIsFilterOpen(false);
   };
+
+  // Enhanced price formatting with Naira symbol - FIXED VERSION
+  const formatPrice = (price) => {
+    try {
+      if (typeof price === 'number') {
+        return `₦${price.toLocaleString('en-NG')}`;
+      }
+      
+      if (typeof price === 'string') {
+        // If it already has Naira symbol, return as is
+        if (price.includes('₦')) {
+          return price;
+        }
+        // If it has 'N' symbol, replace with proper Naira symbol
+        if (price.includes('N')) {
+          return price.replace('N', '₦');
+        }
+        // Otherwise, extract numeric value and format with Naira symbol
+        const cleanPrice = price.replace(/[^\d.]/g, '');
+        const priceValue = parseFloat(cleanPrice);
+        if (!isNaN(priceValue)) {
+          return `₦${priceValue.toLocaleString('en-NG')}`;
+        }
+      }
+      
+      return '₦0';
+    } catch (error) {
+      console.error('Error formatting price:', error);
+      return '₦0';
+    }
+  };
+
+  // Get price display for product
+  const getProductPriceDisplay = (product) => {
+    return formatPrice(extractPrice(product));
+  };
+
+  // Get current price range limits for display
+  const getCurrentPriceRange = () => {
+    const prices = allProducts.map(product => extractPrice(product)).filter(price => price > 0);
+    if (prices.length === 0) return { min: 0, max: 100000 };
+    
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices)
+    };
+  };
+  
+  const priceLimits = getCurrentPriceRange();
   
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
+
+  // Auto-apply filters when price range changes (optional)
+  useEffect(() => {
+    if (allProducts.length > 0) {
+      dispatch(filterProducts({ 
+        searchTerm, 
+        priceRange, 
+        category: categoryFilter, 
+        minRating: ratingFilter 
+      }));
+    }
+  }, [priceRange, categoryFilter, ratingFilter, dispatch, allProducts.length]);
 
   if (loading) {
     return (
@@ -106,6 +225,8 @@ const Home = () => {
                 List Product
               </button>
             </div>
+            
+            {/* Search Bar Section REMOVED - Now in main Header component */}
           </div>
         </div>
       </header>
@@ -141,7 +262,9 @@ const Home = () => {
       <section id="products" className="py-8 bg-white">
         <div className="container mx-auto px-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Featured Products</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Featured Products {filteredProducts.length > 0 && `(${filteredProducts.length})`}
+            </h2>
             <div className="flex gap-2">
               <button 
                 onClick={() => setIsFilterOpen(true)}
@@ -162,12 +285,16 @@ const Home = () => {
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
-                <div key={product.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group">
+                <div key={product.id || product._id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group">
                   <div className="relative overflow-hidden">
                     <img 
                       src={product.imageUrl || "https://via.placeholder.com/300x300?text=Product+Image"} 
                       alt={product.name}
                       className="w-full h-32 sm:h-36 object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://via.placeholder.com/300x300?text=Product+Image";
+                      }}
                     />
                     <button className="absolute top-1 right-1 p-1 bg-white/80 rounded-full hover:bg-white transition-colors backdrop-blur-sm">
                       <IoHeartOutline className="text-sm text-gray-600 hover:text-red-500" />
@@ -175,9 +302,11 @@ const Home = () => {
                   </div>
                   
                   <div className="p-2 sm:p-3">
-                    <h3 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1 line-clamp-2 leading-tight">{product.name}</h3>
+                    <h3 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1 line-clamp-2 leading-tight">{product.sellername}</h3>
                     <p className="text-gray-600 text-xs mb-2 line-clamp-2 leading-tight">{product.description}</p>
-                    <p className="text-gray-600 text-xs mb-2 line-clamp-2 leading-tight">{product.price}</p>
+                    <p className="text-indigo-600 font-bold text-sm mb-2">
+                      {getProductPriceDisplay(product)}
+                    </p>
                     <div className="flex items-center mb-2">
                       <div className="flex">
                         {renderStars(product.rating || 4.5)}
@@ -234,7 +363,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Filter Modal */}
+      {/* Enhanced Filter Modal */}
       {isFilterOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsFilterOpen(false)}></div>
@@ -245,26 +374,65 @@ const Home = () => {
                 onClick={() => setIsFilterOpen(false)}
                 className="p-1 text-gray-400 hover:text-gray-600"
               >
-                <IoClose className="text-xl" />
+                <IoCloseCircle className="text-xl" />
               </button>
             </div>
             
             <div className="space-y-6">
-              {/* Price Range Filter */}
+              {/* Enhanced Price Range Filter */}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Price Range</h4>
-                <div className="space-y-2">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="100000" 
-                    value={priceRange[1]} 
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                    className="w-full"
-                  />
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm text-gray-600 mb-1">Min Price</label>
+                      <input 
+                        type="number" 
+                        min={priceLimits.min}
+                        max={priceLimits.max}
+                        value={priceRange[0]} 
+                        onChange={(e) => setPriceRange([parseInt(e.target.value) || priceLimits.min, priceRange[1]])}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-300"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm text-gray-600 mb-1">Max Price</label>
+                      <input 
+                        type="number" 
+                        min={priceLimits.min}
+                        max={priceLimits.max}
+                        value={priceRange[1]} 
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || priceLimits.max])}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-300"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Dual Range Slider */}
+                  <div className="space-y-2">
+                    <input 
+                      type="range" 
+                      min={priceLimits.min}
+                      max={priceLimits.max}
+                      step="100"
+                      value={priceRange[0]} 
+                      onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <input 
+                      type="range" 
+                      min={priceLimits.min}
+                      max={priceLimits.max}
+                      step="100"
+                      value={priceRange[1]} 
+                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                  
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>N{priceRange[0]}</span>
-                    <span>N{priceRange[1]}</span>
+                    <span>₦{priceRange[0].toLocaleString('en-NG')}</span>
+                    <span>₦{priceRange[1].toLocaleString('en-NG')}</span>
                   </div>
                 </div>
               </div>
@@ -282,6 +450,8 @@ const Home = () => {
                   <option value="clothing">Clothing</option>
                   <option value="home">Home & Garden</option>
                   <option value="automobile">Automobile</option>
+                  <option value="beauty">Beauty & Health</option>
+                  <option value="sports">Sports & Outdoors</option>
                 </select>
               </div>
               

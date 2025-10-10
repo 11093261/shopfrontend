@@ -1,21 +1,32 @@
 // HomeApi.js
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 console.log('API URL:', import.meta.env.VITE_API_BASE_URL);
-//  const products = {
-//    product:"http://localhost:3200/api/product",
-//    seller:`http://localhost:3200/api/seller/${sellerId}`,
-//   fresh:"http://localhost:3200/auth/refresh"
 
-// }
+// Helper function to extract price (same as in your component)
+const extractPrice = (product) => {
+  if (!product) return 0;
+  
+  if (typeof product.price === 'number') {
+    return product.price;
+  }
+  
+  if (typeof product.price === 'string') {
+    // Remove currency symbols and commas, then parse
+    const cleanPrice = product.price.replace(/[^\d.]/g, '');
+    return parseFloat(cleanPrice) || 0;
+  }
+  
+  return 0;
+};
+
 export const fetchProducts = createAsyncThunk(
   "home/fetchProducts",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/product`,
-      
-    );
+      const response = await axios.get(`${API_BASE_URL}/api/product`);
       return response.data;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -113,25 +124,55 @@ const homeSlice = createSlice({
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
     },
-    // Add filterProducts reducer
+    // Enhanced filterProducts reducer with proper price extraction
     filterProducts: (state, action) => {
       const { searchTerm, priceRange, category, minRating } = action.payload;
       state.searchTerm = searchTerm;
       
+      if (!state.data || state.data.length === 0) {
+        state.filteredData = [];
+        return;
+      }
+
       state.filteredData = state.data.filter(product => {
-        const matchesSearch = searchTerm.trim() === '' || 
-          product.name.toLowerCase().includes(searchTerm) ||
-          (product.description && product.description.toLowerCase().includes(searchTerm)) ||
-          (product.sellername && product.sellername.toLowerCase().includes(searchTerm));
-        
-        const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-        
-        const matchesCategory = category === 'all' || 
-          (product.category && product.category.toLowerCase() === category);
-        
-        const matchesRating = product.rating >= minRating;
-        
-        return matchesSearch && matchesPrice && matchesCategory && matchesRating;
+        // Search term filter
+        if (searchTerm && searchTerm.trim() !== '') {
+          const searchLower = searchTerm.toLowerCase().trim();
+          const matchesSearch = 
+            product.name?.toLowerCase().includes(searchLower) ||
+            product.description?.toLowerCase().includes(searchLower) ||
+            product.category?.toLowerCase().includes(searchLower) ||
+            (product.sellername && product.sellername.toLowerCase().includes(searchLower));
+          
+          if (!matchesSearch) return false;
+        }
+
+        // Price range filter - USING EXTRACTED PRICE
+        if (priceRange && Array.isArray(priceRange)) {
+          const [minPrice, maxPrice] = priceRange;
+          const productPrice = extractPrice(product);
+          
+          if (productPrice < minPrice || productPrice > maxPrice) {
+            return false;
+          }
+        }
+
+        // Category filter
+        if (category && category !== 'all') {
+          if (!product.category || product.category.toLowerCase() !== category.toLowerCase()) {
+            return false;
+          }
+        }
+
+        // Rating filter
+        if (minRating && minRating > 0) {
+          const productRating = product.rating || 0;
+          if (productRating < minRating) {
+            return false;
+          }
+        }
+
+        return true;
       });
     },
     // Add reset state reducer
