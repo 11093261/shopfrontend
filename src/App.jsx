@@ -59,11 +59,6 @@ const AppContent = () => {
               <Route path="cart" element={<Cart />} />
               
               {/* Seller route - now inside Body layout */}
-              <Route path="seller" element={
-                <ProtectedRoute>
-                  <Seller />
-                </ProtectedRoute>
-              } />
               
               {/* Authentication routes - only accessible when logged out */}
               <Route path="login" element={
@@ -109,6 +104,11 @@ const AppContent = () => {
                 </ProtectedRoute>
               } />
             </Route>
+              <Route path="seller" element={
+                <ProtectedRoute>
+                  <Seller />
+                </ProtectedRoute>
+              } />
             
             {/* Admin routes (outside Body layout if needed) */}
             <Route path="admin" element={<Admin />} />
