@@ -25,7 +25,6 @@ const Seller = () => {
   
   const { isAuthenticated, user: authUser, isLoading: authLoading } = useAuth();
   
-  // FIX: Ensure proper backend URL
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   
   const [showChat, setShowChat] = useState(false);
@@ -55,132 +54,154 @@ const Seller = () => {
   // Handle seller data and view type
   useEffect(() => {  
     if (!selectedSeller) {
+      console.log('No seller data available, redirecting to home');
       navigate('/');
       return;
     }
     
-    if (authUser && authUser.userId === selectedSeller._id) {
+    // Check if current user is the seller
+    if (authUser && selectedSeller._id && authUser.userId === selectedSeller._id) {
       setIsSellerView(true);
+      console.log('Seller view activated');
+    } else {
+      setIsSellerView(false);
     }
   }, [selectedSeller, authUser, navigate]);
   
-  // FIXED: Socket connection with proper URL
+  // Socket connection
   useEffect(() => {
     // Only connect if authenticated and seller data is available
     if (!isAuthenticated || authLoading || !selectedSeller || !selectedSeller._id) {
+      console.log('Socket connection conditions not met:', {
+        isAuthenticated,
+        authLoading,
+        hasSeller: !!selectedSeller,
+        sellerId: selectedSeller?._id
+      });
       return;
     }
 
     const token = getCookie('token');
     
-    // FIX: Use the correct backend URL for Socket.io
     console.log('Connecting to Socket.io server:', API_BASE_URL);
     
-    socketRef.current = io(API_BASE_URL, {
-      auth: {
-        token: token
-      },
-      query: {
-        sellerId: selectedSeller._id,
-        userId: authUser?.userId || 'guest',
-        userType: isSellerView ? 'seller' : 'buyer',
-        userName: authUser?.name || 'Guest User'
-      },
-      withCredentials: true,
-      transports: ['websocket', 'polling']
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('✅ Connected to chat server');
-      setIsConnected(true);
-      
-      if (isSellerView) {
-        console.log('Seller connected, waiting for conversations');
-      } else {
-        const roomId = `chat_${selectedSeller._id}_${authUser?.userId || 'guest'}`;
-        socketRef.current.emit('join_chat', {
-          roomId,
+    try {
+      socketRef.current = io(API_BASE_URL, {
+        auth: {
+          token: token
+        },
+        query: {
           sellerId: selectedSeller._id,
-          userId: authUser?.userId || 'guest'
-        });
-      }
-    });
+          userId: authUser?.userId || 'guest',
+          userType: isSellerView ? 'seller' : 'buyer',
+          userName: authUser?.name || 'Guest User'
+        },
+        withCredentials: true,
+        transports: ['websocket', 'polling']
+      });
 
-    socketRef.current.on('disconnect', (reason) => {
-      console.log('❌ Disconnected from chat server:', reason);
-      setIsConnected(false);
-    });
+      socketRef.current.on('connect', () => {
+        console.log('✅ Connected to chat server');
+        setIsConnected(true);
+        
+        if (isSellerView) {
+          console.log('Seller connected, waiting for conversations');
+          // Seller should listen for all conversations
+        } else {
+          const roomId = `chat_${selectedSeller._id}_${authUser?.userId || 'guest'}`;
+          socketRef.current.emit('join_chat', {
+            roomId,
+            sellerId: selectedSeller._id,
+            userId: authUser?.userId || 'guest'
+          });
+          console.log('Buyer joined chat room:', roomId);
+        }
+      });
 
-    socketRef.current.on('connect_error', (error) => {
-      console.error('🔴 Socket connection error:', error);
-      setIsConnected(false);
-    });
+      socketRef.current.on('disconnect', (reason) => {
+        console.log('❌ Disconnected from chat server:', reason);
+        setIsConnected(false);
+      });
 
-    socketRef.current.on('message_received', (message) => {
-      setMessages(prev => [...prev, message]);
-      if (isSellerView && activeConversation && 
-          activeConversation.buyerId !== message.userId) {
+      socketRef.current.on('connect_error', (error) => {
+        console.error('🔴 Socket connection error:', error);
+        setIsConnected(false);
+      });
+
+      socketRef.current.on('message_received', (message) => {
+        console.log('Message received:', message);
+        setMessages(prev => [...prev, message]);
+        if (isSellerView && activeConversation && 
+            activeConversation.buyerId !== message.userId) {
+          setUnreadCounts(prev => ({
+            ...prev,
+            [message.userId]: (prev[message.userId] || 0) + 1
+          }));
+        }
+      });
+
+      socketRef.current.on('previous_messages', (chatHistory) => {
+        console.log('Previous messages loaded:', chatHistory.length);
+        setMessages(chatHistory);
+      });
+      
+      socketRef.current.on('previous_conversations', (conversationList) => {
+        console.log('Previous conversations loaded:', conversationList.length);
+        setConversations(conversationList);
+      });
+      
+      socketRef.current.on('new_conversation', (conversation) => {
+        console.log('New conversation:', conversation);
+        setConversations(prev => [...prev, conversation]);
+      });
+      
+      socketRef.current.on('conversation_messages', (messageHistory) => {
+        console.log('Conversation messages loaded:', messageHistory.length);
+        setMessages(messageHistory);
+        if (isSellerView && activeConversation) {
+          setUnreadCounts(prev => ({
+            ...prev,
+            [activeConversation.buyerId]: 0
+          }));
+        }
+      });
+      
+      socketRef.current.on('new_message_notification', (data) => {
+        if (Notification.permission === 'granted') {
+          new Notification(`New message from ${data.buyerName}`, {
+            body: data.message,
+            icon: selectedSeller.imageUrl
+          });
+        }
         setUnreadCounts(prev => ({
           ...prev,
-          [message.userId]: (prev[message.userId] || 0) + 1
+          [data.buyerId]: (prev[data.buyerId] || 0) + 1
         }));
+      });
+      
+      socketRef.current.on('user_typing', (data) => {
+        if (data.typing) {
+          setIsTyping(true);
+          setTypingUser(data.userName);
+        } else {
+          setIsTyping(false);
+          setTypingUser('');
+        }
+      });
+      
+      socketRef.current.on('error', (error) => {
+        console.error('Socket error:', error);
+      });
+      
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
       }
-    });
-
-    socketRef.current.on('previous_messages', (chatHistory) => {
-      setMessages(chatHistory);
-    });
-    
-    socketRef.current.on('previous_conversations', (conversationList) => {
-      setConversations(conversationList);
-    });
-    
-    socketRef.current.on('new_conversation', (conversation) => {
-      setConversations(prev => [...prev, conversation]);
-    });
-    
-    socketRef.current.on('conversation_messages', (messageHistory) => {
-      setMessages(messageHistory);
-      if (isSellerView && activeConversation) {
-        setUnreadCounts(prev => ({
-          ...prev,
-          [activeConversation.buyerId]: 0
-        }));
-      }
-    });
-    
-    socketRef.current.on('new_message_notification', (data) => {
-      if (Notification.permission === 'granted') {
-        new Notification(`New message from ${data.buyerName}`, {
-          body: data.message,
-          icon: selectedSeller.imageUrl
-        });
-      }
-      setUnreadCounts(prev => ({
-        ...prev,
-        [data.buyerId]: (prev[data.buyerId] || 0) + 1
-      }));
-    });
-    
-    socketRef.current.on('user_typing', (data) => {
-      if (data.typing) {
-        setIsTyping(true);
-        setTypingUser(data.userName);
-      } else {
-        setIsTyping(false);
-        setTypingUser('');
-      }
-    });
-    
-    socketRef.current.on('error', (error) => {
-      console.error('Socket error:', error);
-    });
-    
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
+    } catch (error) {
+      console.error('Error setting up socket connection:', error);
     }
     
     return () => {
+      console.log('Cleaning up socket connection');
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -226,6 +247,7 @@ const Seller = () => {
         sellerId: selectedSeller._id,
         userId: conversation.buyerId
       });
+      console.log('Seller joined conversation:', roomId);
     }
   };
 
@@ -257,10 +279,15 @@ const Seller = () => {
           senderName: authUser?.name || 'Guest User'
         };
       }
+      
+      console.log('Sending message:', messageData);
       socketRef.current.emit('send_message', messageData);
       
+      // Optimistically add message to UI
       setMessages(prev => [...prev, messageData]);
       setNewMessage('');
+      
+      // Stop typing indicator
       socketRef.current.emit('typing_stop', { roomId });
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -277,6 +304,7 @@ const Seller = () => {
       } else {
         roomId = `chat_${selectedSeller._id}_${authUser?.userId || 'guest'}`;
       }
+      
       socketRef.current.emit('typing_start', {
         roomId,
         userType: isSellerView ? 'seller' : 'buyer',
@@ -284,11 +312,15 @@ const Seller = () => {
           ? selectedSeller.sellername || selectedSeller.businessName 
           : authUser?.name || 'Guest User'
       });
+      
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
+      
       typingTimeoutRef.current = setTimeout(() => {
-        socketRef.current.emit('typing_stop', { roomId });
+        if (socketRef.current) {
+          socketRef.current.emit('typing_stop', { roomId });
+        }
       }, 1000);
     }
   };
@@ -302,16 +334,20 @@ const Seller = () => {
   };
 
   const formatTime = (timestamp) => {
-    const now = new Date();
-    const messageTime = new Date(timestamp);
-    const diffInHours = (now - messageTime) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 48) {
-      return 'Yesterday';
-    } else {
-      return messageTime.toLocaleDateString();
+    try {
+      const now = new Date();
+      const messageTime = new Date(timestamp);
+      const diffInHours = (now - messageTime) / (1000 * 60 * 60);
+      
+      if (diffInHours < 24) {
+        return messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } else if (diffInHours < 48) {
+        return 'Yesterday';
+      } else {
+        return messageTime.toLocaleDateString();
+      }
+    } catch (error) {
+      return 'Invalid date';
     }
   };
 
@@ -347,18 +383,6 @@ const Seller = () => {
   if (sellerLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-700 space-y-2">
-          {showUserInfo ? (
-            <div className='flex flex-col justify-center items-center h-[40vh] md:w-[100%] w-[50%] sm:w-[50%]'>
-              <p className="font-medium">{userOrdersInfo.fullName}</p>
-              <p>{userOrdersInfo.street}</p>
-              <p>{userOrdersInfo.city}, {userOrdersInfo.state} {userOrdersInfo.zip}</p>
-              <p>Phone: {userOrdersInfo.phone}</p>
-            </div>
-          ) : (
-            <p>........</p>
-          )}
-        </div>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading seller information...</p>
@@ -398,7 +422,22 @@ const Seller = () => {
   }
 
   if (!selectedSeller) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">No Seller Selected</h2>
+            <p className="text-gray-600 mb-6">Please select a seller from the home page to view their profile.</p>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Go to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -414,6 +453,7 @@ const Seller = () => {
           <IoArrowBack className="mr-2" />
           Back to Home
         </button>
+        
         {isSellerView && (
           <div className="mb-6 bg-white rounded-lg shadow-md p-4">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Your Conversations</h2>
@@ -444,7 +484,7 @@ const Seller = () => {
                       {conversation.lastMessage || 'No messages yet'}
                     </p>
                     <p className="text-xs text-gray-500 mt-2">
-                      {new Date(conversation.timestamp).toLocaleDateString()}
+                      {conversation.timestamp ? new Date(conversation.timestamp).toLocaleDateString() : 'No date'}
                     </p>
                   </div>
                 ))
@@ -557,6 +597,7 @@ const Seller = () => {
             </div>
           </div>
         </div>
+
         {selectedSeller.otherProducts && selectedSeller.otherProducts.length > 0 && (
           <div className="mt-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Other Products from This Seller</h2>
@@ -567,12 +608,12 @@ const Seller = () => {
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
                     ) : (
-                    <span className="text-gray-400">No Image</span>
+                      <span className="text-gray-400">No Image</span>
                     )}
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
-                    <p className="text-indigo-600 font-bold">N{product.price?.toFixed(2)}</p>
+                    <p className="text-indigo-600 font-bold">₦{product.price?.toFixed(2)}</p>
                   </div>
                 </div>
               ))}
@@ -681,6 +722,7 @@ const Seller = () => {
           )}
         </div>
       )}
+      
       {isSellerView && showChat && activeConversation && (
         <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200">
           <div className="bg-indigo-600 text-white p-3 rounded-t-lg flex justify-between items-center">
