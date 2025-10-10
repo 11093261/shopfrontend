@@ -58,6 +58,13 @@ const AppContent = () => {
               <Route path="contact" element={<Contact />} />
               <Route path="cart" element={<Cart />} />
               
+              {/* Seller route - now inside Body layout */}
+              <Route path="seller" element={
+                <ProtectedRoute>
+                  <Seller />
+                </ProtectedRoute>
+              } />
+              
               {/* Authentication routes - only accessible when logged out */}
               <Route path="login" element={
                 <PublicRoute>
@@ -103,16 +110,12 @@ const AppContent = () => {
               } />
             </Route>
             
-            {/* Standalone routes outside Body layout */}
-            <Route path="/seller" element={
-              <ProtectedRoute>
-                <Seller />
-              </ProtectedRoute>
-            } />
-            
             {/* Admin routes (outside Body layout if needed) */}
             <Route path="admin" element={<Admin />} />
             <Route path="adminlogin" element={<AdminLogin />} />
+            
+            {/* Catch all route - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           
           {/* Auth debugger - only in development */}
