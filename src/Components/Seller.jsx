@@ -23,9 +23,9 @@ const Seller = () => {
   const { selectedSeller, sellerLoading, sellerError } = useSelector((state) => state.home);
   const userOrdersInfo = useSelector((state) => state.getorderInfo);
   
-  // Use AuthContext for authentication instead of Redux
   const { isAuthenticated, user: authUser, isLoading: authLoading } = useAuth();
   
+  // FIX: Ensure proper backend URL
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
   
   const [showChat, setShowChat] = useState(false);
@@ -59,13 +59,12 @@ const Seller = () => {
       return;
     }
     
-    // Use authUser from AuthContext instead of Redux
     if (authUser && authUser.userId === selectedSeller._id) {
       setIsSellerView(true);
     }
   }, [selectedSeller, authUser, navigate]);
   
-  // Socket connection with proper authentication
+  // FIXED: Socket connection with proper URL
   useEffect(() => {
     // Only connect if authenticated and seller data is available
     if (!isAuthenticated || authLoading || !selectedSeller || !selectedSeller._id) {
@@ -74,7 +73,10 @@ const Seller = () => {
 
     const token = getCookie('token');
     
-    socketRef.current = io(`${API_BASE_URL}`, {
+    // FIX: Use the correct backend URL for Socket.io
+    console.log('Connecting to Socket.io server:', API_BASE_URL);
+    
+    socketRef.current = io(API_BASE_URL, {
       auth: {
         token: token
       },
@@ -84,11 +86,12 @@ const Seller = () => {
         userType: isSellerView ? 'seller' : 'buyer',
         userName: authUser?.name || 'Guest User'
       },
-      withCredentials: true 
+      withCredentials: true,
+      transports: ['websocket', 'polling']
     });
 
     socketRef.current.on('connect', () => {
-      console.log('Connected to chat server');
+      console.log('✅ Connected to chat server');
       setIsConnected(true);
       
       if (isSellerView) {
@@ -103,8 +106,13 @@ const Seller = () => {
       }
     });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from chat server');
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('❌ Disconnected from chat server:', reason);
+      setIsConnected(false);
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('🔴 Socket connection error:', error);
       setIsConnected(false);
     });
 
@@ -175,12 +183,13 @@ const Seller = () => {
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [selectedSeller, authUser, isSellerView, activeConversation, isAuthenticated, authLoading]);
+  }, [selectedSeller, authUser, isSellerView, activeConversation, isAuthenticated, authLoading, API_BASE_URL]);
   
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -221,7 +230,7 @@ const Seller = () => {
   };
 
   const handleSendMessage = () => {
-    if (newMessage.trim() && socketRef.current) {
+    if (newMessage.trim() && socketRef.current && isConnected) {
       let messageData;
       let roomId;
       
@@ -260,7 +269,7 @@ const Seller = () => {
   };
 
   const handleTyping = () => {
-    if (socketRef.current) {
+    if (socketRef.current && isConnected) {
       let roomId;
       
       if (isSellerView && activeConversation) {
@@ -304,6 +313,22 @@ const Seller = () => {
     } else {
       return messageTime.toLocaleDateString();
     }
+  };
+
+  // Show connection status in UI
+  const renderConnectionStatus = () => {
+    if (!isConnected) {
+      return (
+        <div className="bg-yellow-100 text-yellow-800 text-xs p-2 text-center rounded-lg mb-4">
+          🔴 Disconnected from chat server. Reconnecting...
+        </div>
+      );
+    }
+    return (
+      <div className="bg-green-100 text-green-800 text-xs p-2 text-center rounded-lg mb-4">
+        ✅ Connected to chat
+      </div>
+    );
   };
 
   // Show loading while checking authentication
@@ -378,190 +403,9 @@ const Seller = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      {!isSellerView && showChat && (
-        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200">
-          <div className="bg-indigo-600 text-white p-3 rounded-t-lg flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center mr-2">
-                {selectedSeller.imageUrl ? (
-                  <img
-                    src={selectedSeller.imageUrl}
-                    alt={selectedSeller.sellername}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white text-sm font-bold">
-                    {selectedSeller.sellername ? selectedSeller.sellername.charAt(0).toUpperCase() : 'S'}
-                  </span>
-                )}
-              </div>
-              <h3 className="font-semibold">{selectedSeller.sellername}</h3>
-            </div>
-            <div className="flex items-center">
-              <button className="p-1 text-white hover:bg-indigo-700 rounded">
-                <IoVideocam size={16} />
-              </button>
-              <button onClick={() => setShowChat(false)} className="p-1 text-white hover:bg-indigo-700 rounded ml-1">
-                <IoClose size={18} />
-              </button>
-            </div>
-          </div>
-          
-          <div className="h-64 overflow-y-auto p-3 bg-gray-50">
-            {messages.length === 0 ? (
-              <div className="text-center text-gray-500 mt-16">
-                Start a conversation with {selectedSeller.sellername}
-              </div>
-            ) : (
-              messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`mb-3 ${msg.sender === 'buyer' ? 'text-right' : ''}`}
-                >
-                  <div className="text-xs text-gray-500 mb-1">
-                    {msg.sender === 'buyer' ? 'You' : msg.senderName}
-                  </div>
-                  <div
-                    className={`inline-block p-2 rounded-lg max-w-xs ${
-                      msg.sender === 'buyer'
-                        ? 'bg-indigo-500 text-white'
-                        : 'bg-gray-200 text-gray-800'
-                    }`}
-                  >
-                    {msg.message}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatTime(msg.timestamp)}
-                  </div>
-                </div>
-              ))
-            )}
-            {isTyping && (
-              <div className="text-left mb-3">
-                <div className="text-xs text-gray-500 mb-1">{typingUser}</div>
-                <div className="bg-gray-200 text-gray-800 p-2 rounded-lg inline-block">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          
-          <div className="p-3 border-t border-gray-200 flex">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              disabled={!isConnected}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim() || !isConnected}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <IoSend />
-            </button>
-          </div>
-          
-          {!isConnected && (
-            <div className="bg-yellow-100 text-yellow-800 text-xs p-2 text-center">
-              Connecting to chat...
-            </div>
-          )}
-        </div>
-      )}
-      {isSellerView && showChat && activeConversation && (
-        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200">
-          <div className="bg-indigo-600 text-white p-3 rounded-t-lg flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center mr-2">
-                <IoPerson size={16} />
-              </div>
-              <h3 className="font-semibold">Chat with {activeConversation.buyerName}</h3>
-            </div>
-            <button onClick={() => setShowChat(false)} className="text-white">
-              <IoClose />
-            </button>
-          </div>
-          
-          <div className="h-64 overflow-y-auto p-3 bg-gray-50">
-            {messages.length === 0 ? (
-              <div className="text-center text-gray-500 mt-16">
-                No messages in this conversation yet
-              </div>
-            ) : (
-              messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`mb-3 ${msg.sender === 'seller' ? 'text-right' : ''}`}
-                >
-                  <div className="text-xs text-gray-500 mb-1">
-                    {msg.sender === 'seller' ? 'You' : msg.senderName}
-                  </div>
-                  <div
-                    className={`inline-block p-2 rounded-lg max-w-xs ${
-                      msg.sender === 'seller'
-                        ? 'bg-indigo-500 text-white'
-                        : 'bg-gray-200 text-gray-800'
-                    }`}
-                  >
-                    {msg.message}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatTime(msg.timestamp)}
-                  </div>
-                </div>
-              ))
-            )}
-            {isTyping && (
-              <div className="text-left mb-3">
-                <div className="text-xs text-gray-500 mb-1">{typingUser}</div>
-                <div className="bg-gray-200 text-gray-800 p-2 rounded-lg inline-block">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          
-          <div className="p-3 border-t border-gray-200 flex">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              disabled={!isConnected}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim() || !isConnected}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <IoSend />
-            </button>
-          </div>
-          
-          {!isConnected && (
-            <div className="bg-yellow-100 text-yellow-800 text-xs p-2 text-center">
-              Connecting to chat...
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* Add connection status indicator */}
+      {renderConnectionStatus()}
+      
       <div className="container mx-auto px-4">
         <button
           onClick={() => navigate('/')}
@@ -736,6 +580,191 @@ const Seller = () => {
           </div>
         )}
       </div>
+
+      {/* Chat components */}
+      {!isSellerView && showChat && (
+        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200">
+          <div className="bg-indigo-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center mr-2">
+                {selectedSeller.imageUrl ? (
+                  <img
+                    src={selectedSeller.imageUrl}
+                    alt={selectedSeller.sellername}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-sm font-bold">
+                    {selectedSeller.sellername ? selectedSeller.sellername.charAt(0).toUpperCase() : 'S'}
+                  </span>
+                )}
+              </div>
+              <h3 className="font-semibold">{selectedSeller.sellername}</h3>
+            </div>
+            <div className="flex items-center">
+              <button className="p-1 text-white hover:bg-indigo-700 rounded">
+                <IoVideocam size={16} />
+              </button>
+              <button onClick={() => setShowChat(false)} className="p-1 text-white hover:bg-indigo-700 rounded ml-1">
+                <IoClose size={18} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="h-64 overflow-y-auto p-3 bg-gray-50">
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 mt-16">
+                Start a conversation with {selectedSeller.sellername}
+              </div>
+            ) : (
+              messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`mb-3 ${msg.sender === 'buyer' ? 'text-right' : ''}`}
+                >
+                  <div className="text-xs text-gray-500 mb-1">
+                    {msg.sender === 'buyer' ? 'You' : msg.senderName}
+                  </div>
+                  <div
+                    className={`inline-block p-2 rounded-lg max-w-xs ${
+                      msg.sender === 'buyer'
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    {msg.message}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formatTime(msg.timestamp)}
+                  </div>
+                </div>
+              ))
+            )}
+            {isTyping && (
+              <div className="text-left mb-3">
+                <div className="text-xs text-gray-500 mb-1">{typingUser}</div>
+                <div className="bg-gray-200 text-gray-800 p-2 rounded-lg inline-block">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          
+          <div className="p-3 border-t border-gray-200 flex">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={!isConnected ? "Connecting..." : "Type your message..."}
+              className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={!isConnected}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || !isConnected}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <IoSend />
+            </button>
+          </div>
+          
+          {!isConnected && (
+            <div className="bg-yellow-100 text-yellow-800 text-xs p-2 text-center">
+              Connecting to chat...
+            </div>
+          )}
+        </div>
+      )}
+      {isSellerView && showChat && activeConversation && (
+        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200">
+          <div className="bg-indigo-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center mr-2">
+                <IoPerson size={16} />
+              </div>
+              <h3 className="font-semibold">Chat with {activeConversation.buyerName}</h3>
+            </div>
+            <button onClick={() => setShowChat(false)} className="text-white">
+              <IoClose />
+            </button>
+          </div>
+          
+          <div className="h-64 overflow-y-auto p-3 bg-gray-50">
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 mt-16">
+                No messages in this conversation yet
+              </div>
+            ) : (
+              messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`mb-3 ${msg.sender === 'seller' ? 'text-right' : ''}`}
+                >
+                  <div className="text-xs text-gray-500 mb-1">
+                    {msg.sender === 'seller' ? 'You' : msg.senderName}
+                  </div>
+                  <div
+                    className={`inline-block p-2 rounded-lg max-w-xs ${
+                      msg.sender === 'seller'
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    {msg.message}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formatTime(msg.timestamp)}
+                  </div>
+                </div>
+              ))
+            )}
+            {isTyping && (
+              <div className="text-left mb-3">
+                <div className="text-xs text-gray-500 mb-1">{typingUser}</div>
+                <div className="bg-gray-200 text-gray-800 p-2 rounded-lg inline-block">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          
+          <div className="p-3 border-t border-gray-200 flex">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={!isConnected ? "Connecting..." : "Type your message..."}
+              className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={!isConnected}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || !isConnected}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-r-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <IoSend />
+            </button>
+          </div>
+          
+          {!isConnected && (
+            <div className="bg-yellow-100 text-yellow-800 text-xs p-2 text-center">
+              Connecting to chat...
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

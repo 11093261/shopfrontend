@@ -7,7 +7,6 @@ import { fetchShippingAddress } from '../Components/Shipping';
 import { useAuth } from './context/AuthContext';
 import { FaPhone, FaDollarSign, FaBoxes, FaClipboard, FaLocationArrow, FaCrown, FaCheckCircle, FaExclamationTriangle, FaRedo, FaCreditCard } from 'react-icons/fa';
 
-
 const Order = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -19,7 +18,6 @@ const Order = () => {
   const [orderConfirmation, setOrderConfirmation] = useState(null);
   const { cart } = useContext(CartContext);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
-  // const OldApi = "http://localhost:3200/api/orders/postorders"
   
   // Get shipping data from Redux store
   const { 
@@ -42,13 +40,15 @@ const Order = () => {
 
   useEffect(() => {
     try {
-        if (!authLoading && !isAuthenticated) {
-      console.log('User not authenticated, redirecting to login...');
-      navigate('/login', { 
-        replace: true,
-        state: { from: location.pathname }
-      });
-    }
+      if (!authLoading && !isAuthenticated) {
+        console.log('User not authenticated, redirecting to login...');
+        navigate('/login', { 
+          replace: true,
+          state: { from: location.pathname }
+        });
+        return;
+      }
+      
       const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const shippingFee = subtotal > 0 ? 50 : 0;
       const tax = subtotal * 0.1;
@@ -64,7 +64,7 @@ const Order = () => {
       console.error("Error calculating order breakdown:", error);
       setError("Failed to calculate order totals");
     }
-  }, [cart,authLoading,sAuthenticated]);
+  }, [cart, authLoading, isAuthenticated, navigate, location.pathname]); // FIXED: Changed sAuthenticated to isAuthenticated
 
   // Function to handle authentication errors
   const handleAuthError = (error) => {
@@ -167,27 +167,30 @@ const Order = () => {
     if (typeof error === 'object') return JSON.stringify(error);
     return 'An unknown error occurred';
   };
+
   if (authLoading) {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Checking authentication...</p>
-            </div>
-          </div>
-        );
-      }
-      if (!isAuthenticated) {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
-            <div className="text-center">
-              <FaExclamationTriangle className="text-yellow-500 text-5xl mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h3>
-              <p className="text-gray-600 mb-4">Redirecting to login page...</p>
-            </div>
-          </div>
-        );
-      }
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <FaExclamationTriangle className="text-yellow-500 text-5xl mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-800 mb-2">Authentication Required</h3>
+          <p className="text-gray-600 mb-4">Redirecting to login page...</p>
+        </div>
+      </div>
+    );
+  }
+
   const isLoadingData = shippingLoading;
 
   if (isLoadingData && !shippingAddress) {
